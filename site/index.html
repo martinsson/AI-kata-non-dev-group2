@@ -1,3 +1,150 @@
 <!doctype html>
-<title>Hello</title>
-<h1>Hello, world!</h1>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestion locative</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Gestion locative</h1>
+    <nav id="nav">
+      <button data-view="dashboard" class="active">Tableau de bord</button>
+      <button data-view="apartments">Appartements</button>
+      <button data-view="tenants">Locataires</button>
+      <button data-view="leases">Locations</button>
+      <button data-view="payments">Loyers</button>
+      <button data-view="charges">Charges</button>
+    </nav>
+    <div class="topbar-actions">
+      <button id="export-btn" class="ghost">Exporter</button>
+      <button id="import-btn" class="ghost">Importer</button>
+      <input id="import-file" type="file" accept="application/json" hidden />
+    </div>
+  </header>
+
+  <main id="app"></main>
+
+  <template id="tpl-dashboard">
+    <section class="view">
+      <h2>Tableau de bord</h2>
+      <div class="cards">
+        <div class="card"><span class="card-label">Appartements</span><span class="card-value" data-stat="apartments">0</span></div>
+        <div class="card"><span class="card-label">Locataires</span><span class="card-value" data-stat="tenants">0</span></div>
+        <div class="card"><span class="card-label">Locations actives</span><span class="card-value" data-stat="activeLeases">0</span></div>
+        <div class="card"><span class="card-label">Loyers mensuels</span><span class="card-value" data-stat="monthlyRent">0 €</span></div>
+        <div class="card warn"><span class="card-label">Impayés</span><span class="card-value" data-stat="unpaid">0 €</span></div>
+        <div class="card"><span class="card-label">Charges (12 mois)</span><span class="card-value" data-stat="yearCharges">0 €</span></div>
+      </div>
+      <h3>Locations actives</h3>
+      <div class="table-wrap"><table data-list="active-leases">
+        <thead><tr><th>Appartement</th><th>Locataire</th><th>Début</th><th>Fin</th><th>Loyer</th><th>Charges</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <h3>Derniers paiements</h3>
+      <div class="table-wrap"><table data-list="recent-payments">
+        <thead><tr><th>Date</th><th>Location</th><th>Type</th><th>Montant</th><th>Statut</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </template>
+
+  <template id="tpl-apartments">
+    <section class="view">
+      <div class="view-header">
+        <h2>Appartements</h2>
+        <button class="primary" data-action="add">+ Nouvel appartement</button>
+      </div>
+      <div class="table-wrap"><table data-list="apartments">
+        <thead><tr><th>Nom</th><th>Adresse</th><th>Surface</th><th>Pièces</th><th>Notes</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </template>
+
+  <template id="tpl-tenants">
+    <section class="view">
+      <div class="view-header">
+        <h2>Locataires</h2>
+        <button class="primary" data-action="add">+ Nouveau locataire</button>
+      </div>
+      <div class="table-wrap"><table data-list="tenants">
+        <thead><tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Téléphone</th><th>Notes</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </template>
+
+  <template id="tpl-leases">
+    <section class="view">
+      <div class="view-header">
+        <h2>Locations</h2>
+        <button class="primary" data-action="add">+ Nouvelle location</button>
+      </div>
+      <div class="table-wrap"><table data-list="leases">
+        <thead><tr><th>Appartement</th><th>Locataire</th><th>Début</th><th>Fin</th><th>Loyer</th><th>Charges</th><th>Dépôt</th><th>Statut</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </template>
+
+  <template id="tpl-payments">
+    <section class="view">
+      <div class="view-header">
+        <h2>Loyers et paiements</h2>
+        <div class="header-actions">
+          <button data-action="generate">Générer le mois en cours</button>
+          <button class="primary" data-action="add">+ Nouveau paiement</button>
+        </div>
+      </div>
+      <div class="filters">
+        <label>Location
+          <select data-filter="lease"><option value="">Toutes</option></select>
+        </label>
+        <label>Statut
+          <select data-filter="status">
+            <option value="">Tous</option>
+            <option value="paid">Payé</option>
+            <option value="pending">En attente</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-wrap"><table data-list="payments">
+        <thead><tr><th>Date</th><th>Location</th><th>Type</th><th>Montant</th><th>Statut</th><th>Note</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </template>
+
+  <template id="tpl-charges">
+    <section class="view">
+      <div class="view-header">
+        <h2>Charges</h2>
+        <button class="primary" data-action="add">+ Nouvelle charge</button>
+      </div>
+      <div class="filters">
+        <label>Appartement
+          <select data-filter="apartment"><option value="">Tous</option></select>
+        </label>
+      </div>
+      <div class="table-wrap"><table data-list="charges">
+        <thead><tr><th>Date</th><th>Appartement</th><th>Catégorie</th><th>Libellé</th><th>Montant</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </template>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card">
+      <header>
+        <h3 id="modal-title">Modifier</h3>
+        <button class="ghost" id="modal-close" aria-label="Fermer">×</button>
+      </header>
+      <form id="modal-form"></form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
