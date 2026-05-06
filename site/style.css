@@ -1,0 +1,263 @@
+:root {
+  --bg: #0e0e12;
+  --panel: #1a1a22;
+  --text: #f5f5f7;
+  --muted: #8a8a96;
+  --work: #22c55e;
+  --rest: #ef4444;
+  --ready: #3b82f6;
+  --done: #a855f7;
+  --accent: #facc15;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+header {
+  padding: 16px 20px;
+  text-align: center;
+  border-bottom: 1px solid #27272f;
+}
+header h1 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  font-weight: 500;
+}
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 20px;
+}
+.timer-screen {
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 1;
+  border-radius: 24px;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  transition: background-color 0.3s ease;
+  text-align: center;
+}
+.timer-screen.work { background: var(--work); }
+.timer-screen.rest { background: var(--rest); }
+.timer-screen.ready { background: var(--ready); }
+.timer-screen.done { background: var(--done); }
+.phase {
+  font-size: 22px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+.countdown {
+  font-size: clamp(64px, 18vw, 140px);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.exercise-anim {
+  position: relative;
+  width: clamp(80px, 16vw, 130px);
+  height: clamp(80px, 16vw, 130px);
+  margin: 8px auto 0;
+  color: rgba(255, 255, 255, 0.95);
+  --skin: #f0c098;
+  --hair: #2a1a0e;
+  --shirt: #1d4ed8;
+  --shorts: #1f2937;
+}
+.exercise-anim.coach-female {
+  --hair: #6b3410;
+  --shirt: #db2777;
+}
+.exercise-anim.coach-male {
+  --hair: #2a1a0e;
+  --shirt: #1d4ed8;
+}
+.exercise-anim:empty { display: none; }
+.ex-anim {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.ex-anim svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ex-pushup svg { animation: anim-push 0.85s ease-in-out infinite alternate; }
+@keyframes anim-push {
+  from { transform: translateY(-3px); }
+  to   { transform: translateY(7px); }
+}
+.ex-squat svg { animation: anim-squat 0.85s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes anim-squat {
+  from { transform: translateY(0) scaleY(1); }
+  to   { transform: translateY(6px) scaleY(0.86); }
+}
+.ex-jumpsquat svg { animation: anim-jsquat 0.75s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes anim-jsquat {
+  0%   { transform: translateY(0) scaleY(1); }
+  30%  { transform: translateY(7px) scaleY(0.78); }
+  60%  { transform: translateY(-12px) scaleY(1.08); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+.ex-plank svg { animation: anim-breathe 2s ease-in-out infinite alternate; transform-origin: center; }
+@keyframes anim-breathe {
+  from { transform: scale(1); }
+  to   { transform: scale(1.04); }
+}
+.two-state .state-a { animation: state-a var(--dur, 0.6s) steps(1) infinite; }
+.two-state .state-b { animation: state-b var(--dur, 0.6s) steps(1) infinite; opacity: 0; }
+@keyframes state-a { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes state-b { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
+.ex-mountain { --dur: 0.4s; }
+.ex-jjack    { --dur: 0.5s; }
+.ex-lunge    { --dur: 0.8s; }
+.ex-burpee   { --dur: 0.8s; }
+.ex-crunch   { --dur: 0.7s; }
+.ex-default  { --dur: 0.4s; }
+.coach-male .hair-only-f { display: none; }
+.coach-female .hair-only-m { display: none; }
+.coach-toggle { display: flex; gap: 6px; }
+.coach-toggle button {
+  background: #0e0e12;
+  border: 1px solid #2f2f3a;
+  border-radius: 8px;
+  padding: 8px 14px;
+  min-width: 80px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+.coach-toggle button.active {
+  background: var(--accent);
+  color: #1a1a22;
+  border-color: var(--accent);
+}
+.exercise {
+  margin-top: 8px;
+  font-size: clamp(20px, 4vw, 32px);
+  font-weight: 600;
+  min-height: 1.4em;
+}
+.next-up {
+  margin-top: 16px;
+  font-size: 14px;
+  opacity: 0.85;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.round-info {
+  margin-top: 8px;
+  font-size: 16px;
+  opacity: 0.85;
+}
+.controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #2f2f3a;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 110px;
+  transition: transform 0.05s, background 0.2s;
+}
+button:hover { background: #25252f; }
+button:active { transform: scale(0.97); }
+button.primary {
+  background: var(--accent);
+  color: #1a1a22;
+  border-color: var(--accent);
+}
+button.primary:hover { background: #fde047; }
+.config {
+  width: 100%;
+  max-width: 600px;
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+.config h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--muted);
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+.row label {
+  font-size: 15px;
+  color: var(--text);
+}
+.row input[type="number"] {
+  width: 90px;
+  background: #0e0e12;
+  color: var(--text);
+  border: 1px solid #2f2f3a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 16px;
+  text-align: right;
+}
+textarea {
+  width: 100%;
+  min-height: 110px;
+  background: #0e0e12;
+  color: var(--text);
+  border: 1px solid #2f2f3a;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+footer {
+  text-align: center;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
