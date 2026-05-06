@@ -47,7 +47,7 @@ main {
 }
 .timer-screen {
   width: 100%;
-  max-width: 600px;
+  max-width: 380px;
   aspect-ratio: 1;
   border-radius: 24px;
   background: var(--panel);
@@ -71,7 +71,7 @@ main {
   opacity: 0.9;
 }
 .countdown {
-  font-size: clamp(64px, 18vw, 140px);
+  font-size: clamp(48px, 14vw, 96px);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
