@@ -85,10 +85,22 @@
   }
   .exercise-anim {
     position: relative;
-    width: clamp(70px, 14vw, 110px);
-    height: clamp(70px, 14vw, 110px);
+    width: clamp(80px, 16vw, 130px);
+    height: clamp(80px, 16vw, 130px);
     margin: 8px auto 0;
     color: rgba(255, 255, 255, 0.95);
+    --skin: #f0c098;
+    --hair: #2a1a0e;
+    --shirt: #1d4ed8;
+    --shorts: #1f2937;
+  }
+  .exercise-anim.coach-female {
+    --hair: #6b3410;
+    --shirt: #db2777;
+  }
+  .exercise-anim.coach-male {
+    --hair: #2a1a0e;
+    --shirt: #1d4ed8;
   }
   .exercise-anim:empty { display: none; }
   .ex-anim {
@@ -137,6 +149,25 @@
   .ex-burpee   { --dur: 0.8s; }
   .ex-crunch   { --dur: 0.7s; }
   .ex-default  { --dur: 0.4s; }
+  .coach-male .hair-only-f { display: none; }
+  .coach-female .hair-only-m { display: none; }
+  .coach-toggle { display: flex; gap: 6px; }
+  .coach-toggle button {
+    background: #0e0e12;
+    border: 1px solid #2f2f3a;
+    border-radius: 8px;
+    padding: 8px 14px;
+    min-width: 80px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .coach-toggle button.active {
+    background: var(--accent);
+    color: #1a1a22;
+    border-color: var(--accent);
+  }
   .exercise {
     margin-top: 8px;
     font-size: clamp(20px, 4vw, 32px);
@@ -279,6 +310,13 @@
       <label for="prepTime">Préparation (s)</label>
       <input type="number" id="prepTime" min="0" max="60" value="10">
     </div>
+    <div class="row">
+      <label>Coach</label>
+      <div class="coach-toggle" id="coachToggle">
+        <button type="button" data-coach="male">Homme</button>
+        <button type="button" data-coach="female">Femme</button>
+      </div>
+    </div>
     <div>
       <label for="exercises" style="display:block;margin-bottom:6px;">Exercices (un par ligne)</label>
       <textarea id="exercises">Burpees
@@ -320,6 +358,7 @@ Crunchs</textarea>
   let state = 'idle'; // idle | prep | work | rest | done | paused
   let prevState = null;
   let lastAnimEx = null;
+  let coach = (localStorage.getItem('hiit-coach') === 'female') ? 'female' : 'male';
   let timeLeft = 0;
   let currentRound = 0;
   let totalRounds = 8;
@@ -407,7 +446,7 @@ Crunchs</textarea>
     return 'default';
   }
 
-  const SVG_ATTRS = 'fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"';
+  const SVG_ATTRS = 'stroke="var(--skin)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"';
   function svgOne(content) {
     return `<svg viewBox="0 0 100 100"><g ${SVG_ATTRS}>${content}</g></svg>`;
   }
@@ -421,96 +460,138 @@ Crunchs</textarea>
     return `<div class="ex-anim ${klass} two-state">${svgState(a, 'state-a')}${svgState(b, 'state-b')}</div>`;
   }
 
+  function head(cx, cy) {
+    return `<circle cx="${cx}" cy="${cy}" r="8" fill="var(--skin)" stroke="none"/>`;
+  }
+  function hair(cx, cy, rot) {
+    const r = rot || 0;
+    return `<g transform="translate(${cx},${cy}) rotate(${r})">
+      <path class="hair-only-m" d="M -8 0 C -11 -13, 11 -13, 8 0 Z" fill="var(--hair)" stroke="none"/>
+      <path class="hair-only-f" d="M -9 0 C -12 -14, 12 -14, 9 0 Z" fill="var(--hair)" stroke="none"/>
+      <path class="hair-only-f" d="M -9 -2 L -11 14 L -6 14 L -5 -2 Z" fill="var(--hair)" stroke="none"/>
+      <path class="hair-only-f" d="M 9 -2 L 11 14 L 6 14 L 5 -2 Z" fill="var(--hair)" stroke="none"/>
+    </g>`;
+  }
+  function torso(x1, y1, x2, y2) {
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--shirt)" stroke-width="14" stroke-linecap="round"/>`;
+  }
+  function shorts(x1, y1, x2, y2) {
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--shorts)" stroke-width="11" stroke-linecap="round"/>`;
+  }
+
   const PARTS = {
     pushup: `
-      <circle cx="18" cy="55" r="5" fill="currentColor"/>
-      <line x1="23" y1="55" x2="85" y2="55"/>
-      <line x1="40" y1="55" x2="40" y2="78"/>
-      <line x1="68" y1="55" x2="68" y2="78"/>`,
-    standing: `
-      <circle cx="50" cy="20" r="6" fill="currentColor"/>
-      <line x1="50" y1="26" x2="50" y2="55"/>
-      <line x1="50" y1="34" x2="35" y2="48"/>
-      <line x1="50" y1="34" x2="65" y2="48"/>
-      <line x1="50" y1="55" x2="42" y2="85"/>
-      <line x1="50" y1="55" x2="58" y2="85"/>`,
-    squat: `
-      <circle cx="50" cy="22" r="6" fill="currentColor"/>
-      <line x1="50" y1="28" x2="50" y2="55"/>
-      <line x1="50" y1="34" x2="35" y2="48"/>
-      <line x1="50" y1="34" x2="65" y2="48"/>
-      <polyline points="50,55 38,68 42,85"/>
-      <polyline points="50,55 62,68 58,85"/>`,
-    plank: `
-      <circle cx="18" cy="58" r="5" fill="currentColor"/>
-      <line x1="23" y1="58" x2="85" y2="58"/>
       <line x1="40" y1="58" x2="40" y2="80"/>
       <line x1="68" y1="58" x2="68" y2="80"/>
-      <line x1="85" y1="58" x2="92" y2="63"/>`,
+      <line x1="85" y1="58" x2="92" y2="64"/>
+      ${torso(28, 58, 82, 58)}
+      ${head(18, 58)}
+      ${hair(18, 58, -90)}`,
+    standing: `
+      <line x1="50" y1="36" x2="35" y2="50"/>
+      <line x1="50" y1="36" x2="65" y2="50"/>
+      <line x1="50" y1="60" x2="42" y2="86"/>
+      <line x1="50" y1="60" x2="58" y2="86"/>
+      ${torso(50, 30, 50, 60)}
+      ${shorts(43, 60, 57, 60)}
+      ${head(50, 20)}
+      ${hair(50, 20, 0)}`,
+    squat: `
+      <polyline points="50,60 38,72 42,86"/>
+      <polyline points="50,60 62,72 58,86"/>
+      <line x1="50" y1="38" x2="35" y2="52"/>
+      <line x1="50" y1="38" x2="65" y2="52"/>
+      ${torso(50, 32, 50, 60)}
+      ${shorts(43, 60, 57, 60)}
+      ${head(50, 24)}
+      ${hair(50, 24, 0)}`,
+    plank: `
+      <line x1="40" y1="58" x2="40" y2="80"/>
+      <line x1="68" y1="58" x2="68" y2="80"/>
+      <line x1="85" y1="58" x2="92" y2="64"/>
+      ${torso(28, 58, 82, 58)}
+      ${head(18, 58)}
+      ${hair(18, 58, -90)}`,
     mcA: `
-      <circle cx="18" cy="55" r="5" fill="currentColor"/>
-      <line x1="23" y1="55" x2="80" y2="55"/>
       <line x1="38" y1="55" x2="38" y2="78"/>
       <line x1="60" y1="55" x2="60" y2="78"/>
-      <polyline points="80,55 70,68 75,82"/>
-      <line x1="80" y1="55" x2="92" y2="80"/>`,
+      <polyline points="80,55 68,68 74,82"/>
+      <line x1="80" y1="55" x2="93" y2="80"/>
+      ${torso(28, 55, 80, 55)}
+      ${head(18, 55)}
+      ${hair(18, 55, -90)}`,
     mcB: `
-      <circle cx="18" cy="55" r="5" fill="currentColor"/>
-      <line x1="23" y1="55" x2="80" y2="55"/>
       <line x1="38" y1="55" x2="38" y2="78"/>
       <line x1="60" y1="55" x2="60" y2="78"/>
-      <line x1="80" y1="55" x2="92" y2="80"/>
-      <polyline points="80,55 70,68 75,82"/>`,
+      <line x1="80" y1="55" x2="93" y2="80"/>
+      <polyline points="80,55 68,68 74,82"/>
+      ${torso(28, 55, 80, 55)}
+      ${head(18, 55)}
+      ${hair(18, 55, -90)}`,
     lungeA: `
-      <circle cx="50" cy="20" r="6" fill="currentColor"/>
-      <line x1="50" y1="26" x2="50" y2="55"/>
-      <line x1="50" y1="34" x2="40" y2="50"/>
-      <line x1="50" y1="34" x2="60" y2="50"/>
-      <polyline points="50,55 65,72 65,85"/>
-      <polyline points="50,55 35,72 35,85"/>`,
+      <line x1="50" y1="36" x2="40" y2="50"/>
+      <line x1="50" y1="36" x2="60" y2="50"/>
+      <polyline points="50,60 65,74 65,86"/>
+      <polyline points="50,60 35,74 35,86"/>
+      ${torso(50, 30, 50, 60)}
+      ${shorts(43, 60, 57, 60)}
+      ${head(50, 20)}
+      ${hair(50, 20, 0)}`,
     lungeB: `
-      <circle cx="50" cy="20" r="6" fill="currentColor"/>
-      <line x1="50" y1="26" x2="50" y2="55"/>
-      <line x1="50" y1="34" x2="40" y2="50"/>
-      <line x1="50" y1="34" x2="60" y2="50"/>
-      <polyline points="50,55 35,72 35,85"/>
-      <polyline points="50,55 65,72 65,85"/>`,
+      <line x1="50" y1="36" x2="40" y2="50"/>
+      <line x1="50" y1="36" x2="60" y2="50"/>
+      <polyline points="50,60 35,74 35,86"/>
+      <polyline points="50,60 65,74 65,86"/>
+      ${torso(50, 30, 50, 60)}
+      ${shorts(43, 60, 57, 60)}
+      ${head(50, 20)}
+      ${hair(50, 20, 0)}`,
     jjackI: `
-      <circle cx="50" cy="18" r="6" fill="currentColor"/>
-      <line x1="50" y1="24" x2="50" y2="60"/>
-      <line x1="50" y1="32" x2="42" y2="58"/>
-      <line x1="50" y1="32" x2="58" y2="58"/>
-      <line x1="50" y1="60" x2="46" y2="88"/>
-      <line x1="50" y1="60" x2="54" y2="88"/>`,
+      <line x1="50" y1="36" x2="42" y2="60"/>
+      <line x1="50" y1="36" x2="58" y2="60"/>
+      <line x1="50" y1="62" x2="46" y2="88"/>
+      <line x1="50" y1="62" x2="54" y2="88"/>
+      ${torso(50, 30, 50, 62)}
+      ${shorts(44, 62, 56, 62)}
+      ${head(50, 20)}
+      ${hair(50, 20, 0)}`,
     jjackX: `
-      <circle cx="50" cy="22" r="6" fill="currentColor"/>
-      <line x1="50" y1="28" x2="50" y2="58"/>
-      <line x1="50" y1="32" x2="22" y2="22"/>
-      <line x1="50" y1="32" x2="78" y2="22"/>
-      <line x1="50" y1="58" x2="28" y2="86"/>
-      <line x1="50" y1="58" x2="72" y2="86"/>`,
+      <line x1="50" y1="34" x2="24" y2="22"/>
+      <line x1="50" y1="34" x2="76" y2="22"/>
+      <line x1="50" y1="60" x2="28" y2="86"/>
+      <line x1="50" y1="60" x2="72" y2="86"/>
+      ${torso(50, 30, 50, 60)}
+      ${shorts(43, 60, 57, 60)}
+      ${head(50, 22)}
+      ${hair(50, 22, 0)}`,
     crunchFlat: `
       <polyline points="32,82 48,55 65,75"/>
-      <line x1="65" y1="75" x2="92" y2="75"/>
-      <circle cx="93" cy="75" r="5" fill="currentColor"/>`,
+      ${torso(65, 75, 88, 75)}
+      ${head(92, 75)}
+      ${hair(92, 75, 90)}`,
     crunchUp: `
       <polyline points="32,82 48,55 65,75"/>
-      <line x1="65" y1="75" x2="78" y2="55"/>
-      <circle cx="80" cy="52" r="5" fill="currentColor"/>`,
+      ${torso(65, 75, 78, 56)}
+      ${head(80, 50)}
+      ${hair(80, 50, 60)}`,
     runA: `
-      <circle cx="50" cy="18" r="6" fill="currentColor"/>
-      <line x1="50" y1="24" x2="50" y2="55"/>
-      <line x1="50" y1="32" x2="38" y2="50"/>
-      <line x1="50" y1="32" x2="62" y2="46"/>
-      <line x1="50" y1="55" x2="42" y2="80"/>
-      <line x1="50" y1="55" x2="62" y2="85"/>`,
+      <line x1="50" y1="36" x2="38" y2="52"/>
+      <line x1="50" y1="36" x2="62" y2="46"/>
+      <line x1="50" y1="60" x2="42" y2="82"/>
+      <line x1="50" y1="60" x2="62" y2="86"/>
+      ${torso(50, 30, 50, 60)}
+      ${shorts(43, 60, 57, 60)}
+      ${head(50, 20)}
+      ${hair(50, 20, 0)}`,
     runB: `
-      <circle cx="50" cy="18" r="6" fill="currentColor"/>
-      <line x1="50" y1="24" x2="50" y2="55"/>
-      <line x1="50" y1="32" x2="62" y2="50"/>
-      <line x1="50" y1="32" x2="38" y2="46"/>
-      <line x1="50" y1="55" x2="58" y2="80"/>
-      <line x1="50" y1="55" x2="38" y2="85"/>`,
+      <line x1="50" y1="36" x2="62" y2="52"/>
+      <line x1="50" y1="36" x2="38" y2="46"/>
+      <line x1="50" y1="60" x2="58" y2="82"/>
+      <line x1="50" y1="60" x2="38" y2="86"/>
+      ${torso(50, 30, 50, 60)}
+      ${shorts(43, 60, 57, 60)}
+      ${head(50, 20)}
+      ${hair(50, 20, 0)}`,
   };
 
   const ANIMS = {
@@ -542,7 +623,7 @@ Crunchs</textarea>
       exerciseEl.textContent = 'Appuie sur Start';
       roundInfoEl.textContent = '';
       nextUpEl.textContent = exerciseList[0] ? 'Premier : ' + exerciseList[0] : '';
-      setAnim(null);
+      setAnim(exerciseList[0] || 'aperçu');
     } else if (state === 'prep') {
       setScreenClass('ready');
       phaseEl.textContent = 'Préparation';
@@ -703,6 +784,23 @@ Crunchs</textarea>
   function enableInputs(enabled) {
     Object.values(inputs).forEach(el => { el.disabled = !enabled; });
   }
+
+  function applyCoach() {
+    animEl.classList.toggle('coach-female', coach === 'female');
+    animEl.classList.toggle('coach-male', coach === 'male');
+    document.querySelectorAll('#coachToggle button').forEach(b => {
+      b.classList.toggle('active', b.dataset.coach === coach);
+    });
+  }
+  function setCoach(g) {
+    coach = (g === 'female') ? 'female' : 'male';
+    localStorage.setItem('hiit-coach', coach);
+    applyCoach();
+  }
+  document.querySelectorAll('#coachToggle button').forEach(b => {
+    b.addEventListener('click', () => setCoach(b.dataset.coach));
+  });
+  applyCoach();
 
   startBtn.addEventListener('click', start);
   pauseBtn.addEventListener('click', pause);
