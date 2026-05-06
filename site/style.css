@@ -142,6 +142,26 @@ main {
 .ex-default  { --dur: 0.4s; }
 .coach-male .hair-only-f { display: none; }
 .coach-female .hair-only-m { display: none; }
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stepper input[type="number"] {
+  width: 52px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.stepper input[type="number"]::-webkit-outer-spin-button,
+.stepper input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+.stepper button {
+  min-width: 36px;
+  padding: 8px;
+  font-size: 18px;
+  line-height: 1;
+}
 .coach-toggle { display: flex; gap: 6px; }
 .coach-toggle button {
   background: #0e0e12;
