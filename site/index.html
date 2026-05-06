@@ -1,3 +1,535 @@
 <!doctype html>
-<title>Hello</title>
-<h1>Hello, world!</h1>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HIIT / Tabata Timer</title>
+<style>
+  :root {
+    --bg: #0e0e12;
+    --panel: #1a1a22;
+    --text: #f5f5f7;
+    --muted: #8a8a96;
+    --work: #22c55e;
+    --rest: #ef4444;
+    --ready: #3b82f6;
+    --done: #a855f7;
+    --accent: #facc15;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    padding: 16px 20px;
+    text-align: center;
+    border-bottom: 1px solid #27272f;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 20px;
+  }
+  .timer-screen {
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 1;
+    border-radius: 24px;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    transition: background-color 0.3s ease;
+    text-align: center;
+  }
+  .timer-screen.work { background: var(--work); }
+  .timer-screen.rest { background: var(--rest); }
+  .timer-screen.ready { background: var(--ready); }
+  .timer-screen.done { background: var(--done); }
+  .phase {
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+    opacity: 0.9;
+  }
+  .countdown {
+    font-size: clamp(80px, 22vw, 180px);
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .exercise {
+    margin-top: 12px;
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: 600;
+    min-height: 1.4em;
+  }
+  .next-up {
+    margin-top: 16px;
+    font-size: 14px;
+    opacity: 0.85;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .round-info {
+    margin-top: 8px;
+    font-size: 16px;
+    opacity: 0.85;
+  }
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid #2f2f3a;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 110px;
+    transition: transform 0.05s, background 0.2s;
+  }
+  button:hover { background: #25252f; }
+  button:active { transform: scale(0.97); }
+  button.primary {
+    background: var(--accent);
+    color: #1a1a22;
+    border-color: var(--accent);
+  }
+  button.primary:hover { background: #fde047; }
+  .config {
+    width: 100%;
+    max-width: 600px;
+    background: var(--panel);
+    border-radius: 16px;
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+  }
+  .config h2 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .row label {
+    font-size: 15px;
+    color: var(--text);
+  }
+  .row input[type="number"] {
+    width: 90px;
+    background: #0e0e12;
+    color: var(--text);
+    border: 1px solid #2f2f3a;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 16px;
+    text-align: right;
+  }
+  textarea {
+    width: 100%;
+    min-height: 110px;
+    background: #0e0e12;
+    color: var(--text);
+    border: 1px solid #2f2f3a;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  footer {
+    text-align: center;
+    padding: 12px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>HIIT / TABATA TIMER</h1>
+</header>
+<main>
+  <div id="screen" class="timer-screen ready">
+    <div class="phase" id="phase">Prêt ?</div>
+    <div class="countdown" id="countdown">00</div>
+    <div class="exercise" id="exercise">Appuie sur Start</div>
+    <div class="round-info" id="roundInfo"></div>
+    <div class="next-up" id="nextUp"></div>
+  </div>
+
+  <div class="controls">
+    <button id="startBtn" class="primary">Start</button>
+    <button id="pauseBtn" disabled>Pause</button>
+    <button id="resetBtn">Reset</button>
+  </div>
+
+  <section class="config" id="config">
+    <h2>Configuration</h2>
+    <div class="row">
+      <label for="workTime">Temps d'effort (s)</label>
+      <input type="number" id="workTime" min="5" max="600" value="30">
+    </div>
+    <div class="row">
+      <label for="restTime">Temps de repos (s)</label>
+      <input type="number" id="restTime" min="0" max="600" value="15">
+    </div>
+    <div class="row">
+      <label for="rounds">Nombre de rounds</label>
+      <input type="number" id="rounds" min="1" max="100" value="8">
+    </div>
+    <div class="row">
+      <label for="prepTime">Préparation (s)</label>
+      <input type="number" id="prepTime" min="0" max="60" value="10">
+    </div>
+    <div>
+      <label for="exercises" style="display:block;margin-bottom:6px;">Exercices (un par ligne)</label>
+      <textarea id="exercises">Burpees
+Pompes
+Squats sautés
+Mountain climbers
+Gainage
+Fentes sautées
+Jumping jacks
+Crunchs</textarea>
+      <div class="hint">La liste défile à chaque round. Si elle est plus courte que le nombre de rounds, elle reboucle.</div>
+    </div>
+  </section>
+</main>
+<footer>Reste ton portable allumé pendant la séance ✊</footer>
+
+<script>
+(() => {
+  const screen = document.getElementById('screen');
+  const phaseEl = document.getElementById('phase');
+  const countdownEl = document.getElementById('countdown');
+  const exerciseEl = document.getElementById('exercise');
+  const roundInfoEl = document.getElementById('roundInfo');
+  const nextUpEl = document.getElementById('nextUp');
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const config = document.getElementById('config');
+
+  const inputs = {
+    work: document.getElementById('workTime'),
+    rest: document.getElementById('restTime'),
+    rounds: document.getElementById('rounds'),
+    prep: document.getElementById('prepTime'),
+    exercises: document.getElementById('exercises'),
+  };
+
+  let state = 'idle'; // idle | prep | work | rest | done | paused
+  let prevState = null;
+  let timeLeft = 0;
+  let currentRound = 0;
+  let totalRounds = 8;
+  let workTime = 30;
+  let restTime = 15;
+  let prepTime = 10;
+  let exerciseList = [];
+  let intervalId = null;
+  let wakeLock = null;
+
+  // Beeps via Web Audio
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function beep(freq = 880, duration = 150, volume = 0.25) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    gain.gain.value = volume;
+    osc.connect(gain).connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration / 1000);
+    osc.start(now);
+    osc.stop(now + duration / 1000);
+  }
+
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (e) { /* ignore */ }
+  }
+  function releaseWakeLock() {
+    if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+  }
+
+  function readConfig() {
+    workTime = clampInt(inputs.work.value, 1, 3600, 30);
+    restTime = clampInt(inputs.rest.value, 0, 3600, 15);
+    totalRounds = clampInt(inputs.rounds.value, 1, 200, 8);
+    prepTime = clampInt(inputs.prep.value, 0, 600, 10);
+    exerciseList = inputs.exercises.value
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+  function clampInt(v, min, max, def) {
+    const n = parseInt(v, 10);
+    if (isNaN(n)) return def;
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function exerciseFor(round) {
+    if (exerciseList.length === 0) return '';
+    return exerciseList[(round - 1) % exerciseList.length];
+  }
+
+  function setScreenClass(cls) {
+    screen.classList.remove('work', 'rest', 'ready', 'done');
+    screen.classList.add(cls);
+  }
+
+  function render() {
+    countdownEl.textContent = String(timeLeft).padStart(2, '0');
+
+    if (state === 'idle') {
+      setScreenClass('ready');
+      phaseEl.textContent = 'Prêt ?';
+      exerciseEl.textContent = 'Appuie sur Start';
+      roundInfoEl.textContent = '';
+      nextUpEl.textContent = exerciseList[0] ? 'Premier : ' + exerciseList[0] : '';
+    } else if (state === 'prep') {
+      setScreenClass('ready');
+      phaseEl.textContent = 'Préparation';
+      exerciseEl.textContent = 'À suivre : ' + (exerciseFor(1) || '—');
+      roundInfoEl.textContent = `Round 1 / ${totalRounds}`;
+      nextUpEl.textContent = '';
+    } else if (state === 'work') {
+      setScreenClass('work');
+      phaseEl.textContent = 'Effort';
+      exerciseEl.textContent = exerciseFor(currentRound) || '—';
+      roundInfoEl.textContent = `Round ${currentRound} / ${totalRounds}`;
+      const next = currentRound < totalRounds ? exerciseFor(currentRound + 1) : null;
+      nextUpEl.textContent = next ? 'Prochain : ' + next : 'Dernier round !';
+    } else if (state === 'rest') {
+      setScreenClass('rest');
+      phaseEl.textContent = 'Repos';
+      const next = exerciseFor(currentRound + 1);
+      exerciseEl.textContent = 'À suivre : ' + (next || '—');
+      roundInfoEl.textContent = `Round ${currentRound + 1} / ${totalRounds}`;
+      nextUpEl.textContent = '';
+    } else if (state === 'done') {
+      setScreenClass('done');
+      phaseEl.textContent = 'Terminé !';
+      countdownEl.textContent = '✓';
+      exerciseEl.textContent = 'Bien joué 💪';
+      roundInfoEl.textContent = `${totalRounds} rounds`;
+      nextUpEl.textContent = '';
+    } else if (state === 'paused') {
+      phaseEl.textContent = 'Pause';
+    }
+  }
+
+  function tick() {
+    timeLeft -= 1;
+    if (timeLeft <= 3 && timeLeft > 0) beep(880, 120, 0.2);
+    if (timeLeft <= 0) {
+      transition();
+    } else {
+      render();
+    }
+  }
+
+  function transition() {
+    if (state === 'prep') {
+      currentRound = 1;
+      state = 'work';
+      timeLeft = workTime;
+      beep(1200, 250, 0.3);
+    } else if (state === 'work') {
+      if (currentRound >= totalRounds) {
+        finish();
+        return;
+      }
+      if (restTime > 0) {
+        state = 'rest';
+        timeLeft = restTime;
+        beep(440, 250, 0.3);
+      } else {
+        currentRound += 1;
+        state = 'work';
+        timeLeft = workTime;
+        beep(1200, 250, 0.3);
+      }
+    } else if (state === 'rest') {
+      currentRound += 1;
+      state = 'work';
+      timeLeft = workTime;
+      beep(1200, 250, 0.3);
+    }
+    render();
+  }
+
+  function finish() {
+    stopInterval();
+    state = 'done';
+    beep(1200, 200, 0.3);
+    setTimeout(() => beep(1500, 400, 0.3), 220);
+    render();
+    startBtn.textContent = 'Start';
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    config.style.opacity = '1';
+    enableInputs(true);
+    releaseWakeLock();
+  }
+
+  function start() {
+    ensureAudio();
+    if (state === 'paused') {
+      state = prevState;
+      prevState = null;
+    } else if (state === 'idle' || state === 'done') {
+      readConfig();
+      currentRound = 0;
+      if (prepTime > 0) {
+        state = 'prep';
+        timeLeft = prepTime;
+      } else {
+        currentRound = 1;
+        state = 'work';
+        timeLeft = workTime;
+        beep(1200, 250, 0.3);
+      }
+      requestWakeLock();
+      enableInputs(false);
+      config.style.opacity = '0.5';
+    }
+    render();
+    stopInterval();
+    intervalId = setInterval(tick, 1000);
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    pauseBtn.textContent = 'Pause';
+  }
+
+  function pause() {
+    if (state === 'paused') {
+      start();
+    } else if (state !== 'idle' && state !== 'done') {
+      stopInterval();
+      prevState = state;
+      state = 'paused';
+      render();
+      countdownEl.textContent = String(timeLeft).padStart(2, '0');
+      startBtn.disabled = false;
+      startBtn.textContent = 'Reprendre';
+      pauseBtn.textContent = 'Pause';
+      pauseBtn.disabled = true;
+    }
+  }
+
+  function reset() {
+    stopInterval();
+    state = 'idle';
+    prevState = null;
+    currentRound = 0;
+    readConfig();
+    timeLeft = 0;
+    render();
+    countdownEl.textContent = '00';
+    startBtn.disabled = false;
+    startBtn.textContent = 'Start';
+    pauseBtn.disabled = true;
+    pauseBtn.textContent = 'Pause';
+    config.style.opacity = '1';
+    enableInputs(true);
+    releaseWakeLock();
+  }
+
+  function stopInterval() {
+    if (intervalId) { clearInterval(intervalId); intervalId = null; }
+  }
+
+  function enableInputs(enabled) {
+    Object.values(inputs).forEach(el => { el.disabled = !enabled; });
+  }
+
+  startBtn.addEventListener('click', start);
+  pauseBtn.addEventListener('click', pause);
+  resetBtn.addEventListener('click', reset);
+
+  Object.values(inputs).forEach(el => {
+    el.addEventListener('change', () => {
+      if (state === 'idle') { readConfig(); render(); }
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (state === 'idle' || state === 'done' || state === 'paused') start();
+      else pause();
+    } else if (e.key.toLowerCase() === 'r') {
+      reset();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && wakeLock === null && state !== 'idle' && state !== 'done') {
+      requestWakeLock();
+    }
+  });
+
+  readConfig();
+  render();
+})();
+</script>
+</body>
+</html>
