@@ -38,7 +38,11 @@
     </div>
     <div class="row">
       <label for="rounds">Nombre de rounds</label>
-      <input type="number" id="rounds" min="1" max="100" value="8">
+      <div class="stepper">
+        <button type="button" id="roundsMinus">−</button>
+        <input type="number" id="rounds" min="1" max="100" value="8">
+        <button type="button" id="roundsPlus">+</button>
+      </div>
     </div>
     <div class="row">
       <label for="prepTime">Préparation (s)</label>
@@ -102,6 +106,7 @@ Crunchs</textarea>
   let exerciseList = [];
   let intervalId = null;
   let wakeLock = null;
+  const stepperBtns = [document.getElementById('roundsMinus'), document.getElementById('roundsPlus')];
 
   // Beeps via Web Audio
   let audioCtx = null;
@@ -517,6 +522,7 @@ Crunchs</textarea>
 
   function enableInputs(enabled) {
     Object.values(inputs).forEach(el => { el.disabled = !enabled; });
+    stepperBtns.forEach(btn => { btn.disabled = !enabled; });
   }
 
   function applyCoach() {
@@ -535,6 +541,15 @@ Crunchs</textarea>
     b.addEventListener('click', () => setCoach(b.dataset.coach));
   });
   applyCoach();
+
+  document.getElementById('roundsMinus').addEventListener('click', () => {
+    inputs.rounds.value = Math.max(1, clampInt(inputs.rounds.value, 1, 100, 8) - 1);
+    inputs.rounds.dispatchEvent(new Event('change'));
+  });
+  document.getElementById('roundsPlus').addEventListener('click', () => {
+    inputs.rounds.value = Math.min(100, clampInt(inputs.rounds.value, 1, 100, 8) + 1);
+    inputs.rounds.dispatchEvent(new Event('change'));
+  });
 
   startBtn.addEventListener('click', start);
   pauseBtn.addEventListener('click', pause);
