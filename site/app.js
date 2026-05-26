@@ -2,9 +2,6 @@
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
-const CLAUDE_API_URL  = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_MODEL    = 'claude-opus-4-7';
-const API_KEY_STORAGE = 'travelmate-api-key';
 const SAVED_TRIPS_KEY = 'travelmate-saved-trips';
 
 let currentPkg = null;
@@ -294,90 +291,6 @@ function generateMockPackage(prompt) {
   };
 }
 
-// ── Claude API ────────────────────────────────────────────────────────────────
-
-async function generateWithClaude(prompt, apiKey) {
-  const systemPrompt = `Tu es un agent de voyage expert francophone. À partir de la description de l'utilisateur, génère un package voyage complet et réaliste au format JSON.
-
-Réponds UNIQUEMENT avec du JSON valide dans ce format exact (sans markdown, sans explication) :
-{
-  "destination": "Ville, Pays",
-  "flag": "🇯🇵",
-  "departureCity": "Paris",
-  "duration": "X jours",
-  "travelers": "X voyageurs",
-  "budgetCategory": "Économique | Confort | Luxe",
-  "budgetPerPerson": "X XXX €",
-  "flights": {
-    "outbound": {
-      "airline": "Nom de la compagnie",
-      "number": "AB1234",
-      "classLabel": "Économique | Économique Premium | Affaires",
-      "price": "XXX € / pers.",
-      "departure": { "time": "HH:MM", "airport": "Ville (CODE)" },
-      "arrival":   { "time": "HH:MM+1", "airport": "Ville (CODE)" },
-      "duration": "XhYY",
-      "date": "JJ/MM/AAAA"
-    },
-    "return": { "airline": "...", "number": "...", "classLabel": "...", "price": "...", "departure": { "time": "...", "airport": "..." }, "arrival": { "time": "...", "airport": "..." }, "duration": "...", "date": "..." }
-  },
-  "hotel": {
-    "name": "Nom de l'hôtel",
-    "stars": 4,
-    "location": "Quartier ou ville",
-    "pricePerNight": "XXX €",
-    "description": "Description en 2 phrases.",
-    "amenities": ["WiFi gratuit", "Piscine", "Petit-déjeuner inclus"]
-  },
-  "activities": [
-    { "type": "visite | musee | gastronomie | sport", "name": "Nom", "location": "Lieu", "duration": "Xh", "price": 0, "desc": "Description courte." }
-  ],
-  "program": [
-    {
-      "day": 1,
-      "label": "Jour 1 — Arrivée",
-      "date": "lundi 15 juin 2026",
-      "items": [
-        { "time": "14:00", "type": "transport", "name": "Arrivée", "desc": "Transfert à l'hôtel.", "price": 0 }
-      ]
-    }
-  ]
-}
-
-Contraintes importantes :
-- Toutes les dates commencent dans 3 semaines à partir d'aujourd'hui.
-- Génère au minimum 6 activités variées (visite, musée, gastronomie, sport).
-- Le programme couvre chaque jour avec 2-3 activités.
-- Les prix sont réalistes en euros.
-- Le flag doit être l'emoji du drapeau du pays de destination.`;
-
-  const response = await fetch(CLAUDE_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-calls': 'true'
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Erreur API (${response.status})`);
-  }
-
-  const data = await response.json();
-  const text = data.content[0].text.trim();
-  const jsonStr = text.startsWith('{') ? text : text.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
-  return JSON.parse(jsonStr);
-}
-
 // ── UI Helpers ────────────────────────────────────────────────────────────────
 
 function setText(id, value) {
@@ -661,27 +574,6 @@ function switchTab(name) {
   });
 }
 
-// ── API Key Modal ─────────────────────────────────────────────────────────────
-
-function openModal() {
-  const modal = document.getElementById('modal-api');
-  if (!modal) return;
-  const stored = localStorage.getItem(API_KEY_STORAGE) || '';
-  const input = document.getElementById('api-key-input');
-  if (input) input.value = stored;
-  const status = document.getElementById('api-key-status');
-  if (status) {
-    status.hidden = !stored;
-    if (stored) { status.className = 'api-key-status ok'; status.textContent = 'Clé API enregistrée — Claude sera utilisé pour la génération.'; }
-  }
-  modal.hidden = false;
-}
-
-function closeModal() {
-  const modal = document.getElementById('modal-api');
-  if (modal) modal.hidden = true;
-}
-
 // ── Main Generate Flow ────────────────────────────────────────────────────────
 
 async function handleGenerate() {
@@ -703,15 +595,8 @@ async function handleGenerate() {
   showView('view-loading');
   window.scrollTo(0, 0);
 
-  const apiKey = localStorage.getItem(API_KEY_STORAGE);
-
   const [pkg] = await Promise.all([
-    apiKey
-      ? generateWithClaude(prompt, apiKey).catch(err => {
-          console.warn('Claude API error, falling back to mock:', err);
-          return generateMockPackage(prompt);
-        })
-      : Promise.resolve(generateMockPackage(prompt)),
+    Promise.resolve(generateMockPackage(prompt)),
     runLoadingAnimation()
   ]);
 
@@ -779,29 +664,4 @@ document.addEventListener('DOMContentLoaded', () => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
-  // API Key modal
-  document.getElementById('btn-api-key')?.addEventListener('click', openModal);
-  document.getElementById('btn-modal-close')?.addEventListener('click', closeModal);
-  document.getElementById('modal-api')?.addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeModal();
-  });
-
-  document.getElementById('btn-api-save')?.addEventListener('click', () => {
-    const val = document.getElementById('api-key-input')?.value.trim();
-    const status = document.getElementById('api-key-status');
-    if (val) {
-      localStorage.setItem(API_KEY_STORAGE, val);
-      if (status) { status.hidden = false; status.className = 'api-key-status ok'; status.textContent = 'Clé enregistrée — Claude sera utilisé pour les prochaines générations.'; }
-    } else {
-      if (status) { status.hidden = false; status.className = 'api-key-status err'; status.textContent = 'Veuillez saisir une clé valide.'; }
-    }
-  });
-
-  document.getElementById('btn-api-clear')?.addEventListener('click', () => {
-    localStorage.removeItem(API_KEY_STORAGE);
-    const input = document.getElementById('api-key-input');
-    if (input) input.value = '';
-    const status = document.getElementById('api-key-status');
-    if (status) { status.hidden = false; status.className = 'api-key-status err'; status.textContent = 'Clé supprimée — mode données simulées activé.'; }
-  });
 });

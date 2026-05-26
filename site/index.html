@@ -22,9 +22,6 @@
       <button id="btn-saved-trips" class="btn-ghost btn-sm">
         <i data-lucide="bookmark"></i> Mes voyages <span id="saved-count" class="saved-badge" hidden></span>
       </button>
-      <button id="btn-api-key" class="btn-ghost btn-sm">
-        <i data-lucide="key"></i> Clé API
-      </button>
     </div>
   </div>
 </header>
@@ -241,23 +238,6 @@
   </div>
 </section>
 
-<!-- ── Modal : Clé API ───────────────────────────────────────────────── -->
-<div id="modal-api" class="modal-backdrop" hidden>
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal-header">
-      <h3 id="modal-title"><i data-lucide="key"></i> Clé API Anthropic</h3>
-      <button id="btn-modal-close" class="btn-icon" aria-label="Fermer"><i data-lucide="x"></i></button>
-    </div>
-    <p class="modal-text">Entrez votre clé API Anthropic pour utiliser Claude et générer des packages vraiment personnalisés. Sans clé, l'application utilise des données simulées réalistes.</p>
-    <input id="api-key-input" type="password" class="api-key-input" placeholder="sk-ant-api03-...">
-    <div id="api-key-status" class="api-key-status" hidden></div>
-    <div class="modal-actions">
-      <button id="btn-api-save" class="btn-primary">Enregistrer</button>
-      <button id="btn-api-clear" class="btn-ghost">Effacer</button>
-    </div>
-    <p class="modal-footnote"><i data-lucide="lock"></i> La clé est stockée uniquement dans votre navigateur (localStorage).</p>
-  </div>
-</div>
 
 </body>
 </html>
