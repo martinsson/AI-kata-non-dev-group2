@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VoyageIA — Votre agence de voyage intelligente</title>
+  <title>TravelMate — Votre agence de voyage IA</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="styles.css">
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
@@ -16,18 +16,23 @@
   <div class="header-inner">
     <div class="brand">
       <i data-lucide="plane-takeoff"></i>
-      <span>VoyageIA</span>
+      <span>TravelMate</span>
     </div>
-    <button id="btn-api-key" class="btn-ghost btn-sm">
-      <i data-lucide="key"></i> Clé API
-    </button>
+    <div class="header-actions">
+      <button id="btn-saved-trips" class="btn-ghost btn-sm">
+        <i data-lucide="bookmark"></i> Mes voyages <span id="saved-count" class="saved-badge" hidden></span>
+      </button>
+      <button id="btn-api-key" class="btn-ghost btn-sm">
+        <i data-lucide="key"></i> Clé API
+      </button>
+    </div>
   </div>
 </header>
 
 <!-- ── Vue : Hero ────────────────────────────────────────────────────── -->
 <section id="view-hero" class="view hero-view">
   <div class="hero-content">
-    <div class="hero-badge"><i data-lucide="sparkles"></i> Propulsé par l'IA</div>
+    <div class="hero-badge"><i data-lucide="sparkles"></i> Propulsé par Claude AI</div>
     <h1 class="hero-title">Votre voyage de rêve,<br>composé par l'IA</h1>
     <p class="hero-sub">Décrivez votre voyage idéal en quelques mots et recevez un programme complet : vols, hôtel, activités et itinéraire jour par jour.</p>
 
@@ -81,9 +86,14 @@
 <section id="view-results" class="view results-view" hidden>
   <div class="results-inner">
 
-    <button id="btn-back" class="btn-back">
-      <i data-lucide="arrow-left"></i> Nouveau voyage
-    </button>
+    <div class="results-topbar">
+      <button id="btn-back" class="btn-back">
+        <i data-lucide="arrow-left"></i> Nouveau voyage
+      </button>
+      <button id="btn-save" class="btn-save">
+        <i data-lucide="bookmark"></i> <span id="save-label">Sauvegarder ce voyage</span>
+      </button>
+    </div>
 
     <!-- Résumé du package -->
     <div class="summary-card">
@@ -210,6 +220,24 @@
       <div id="program-list" class="program-timeline"></div>
     </div>
 
+  </div>
+</section>
+
+<!-- ── Vue : Mes voyages ─────────────────────────────────────────────── -->
+<section id="view-saved" class="view saved-view" hidden>
+  <div class="saved-inner">
+    <button id="btn-saved-back" class="btn-back">
+      <i data-lucide="arrow-left"></i> Retour
+    </button>
+    <div class="saved-header">
+      <h2 class="saved-title"><i data-lucide="bookmark"></i> Mes voyages sauvegardés</h2>
+    </div>
+    <div id="saved-empty" class="saved-empty" hidden>
+      <i data-lucide="map" class="saved-empty-icon"></i>
+      <p>Aucun voyage sauvegardé pour l'instant.</p>
+      <p>Générez un voyage et cliquez sur "Sauvegarder" pour le retrouver ici.</p>
+    </div>
+    <div id="saved-grid" class="saved-grid"></div>
   </div>
 </section>
 

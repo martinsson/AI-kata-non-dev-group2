@@ -2,9 +2,12 @@
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_MODEL   = 'claude-opus-4-7';
-const API_KEY_STORAGE = 'voyageia-api-key';
+const CLAUDE_API_URL  = 'https://api.anthropic.com/v1/messages';
+const CLAUDE_MODEL    = 'claude-opus-4-7';
+const API_KEY_STORAGE = 'travelmate-api-key';
+const SAVED_TRIPS_KEY = 'travelmate-saved-trips';
+
+let currentPkg = null;
 
 // ── Destination Database ─────────────────────────────────────────────────────
 
@@ -390,10 +393,111 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ── Saved Trips ───────────────────────────────────────────────────────────────
+
+function getSavedTrips() {
+  try { return JSON.parse(localStorage.getItem(SAVED_TRIPS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function setSavedTrips(trips) {
+  localStorage.setItem(SAVED_TRIPS_KEY, JSON.stringify(trips));
+}
+
+function updateSavedBadge() {
+  const trips = getSavedTrips();
+  const badge = document.getElementById('saved-count');
+  if (!badge) return;
+  if (trips.length > 0) { badge.textContent = trips.length; badge.hidden = false; }
+  else badge.hidden = true;
+}
+
+function saveCurrentTrip(pkg) {
+  const trips = getSavedTrips();
+  const id = Date.now().toString();
+  trips.unshift({ id, savedAt: new Date().toISOString(), pkg });
+  setSavedTrips(trips);
+  updateSavedBadge();
+}
+
+function deleteTrip(id) {
+  const trips = getSavedTrips().filter(t => t.id !== id);
+  setSavedTrips(trips);
+  updateSavedBadge();
+}
+
+function renderSavedView() {
+  const trips = getSavedTrips();
+  const empty = document.getElementById('saved-empty');
+  const grid  = document.getElementById('saved-grid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  if (empty) empty.hidden = trips.length > 0;
+
+  trips.forEach(({ id, savedAt, pkg }) => {
+    const date = new Date(savedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const card = document.createElement('div');
+    card.className = 'saved-card';
+    card.innerHTML = `
+      <div class="saved-card-header">
+        <span class="saved-card-flag">${esc(pkg.flag)}</span>
+        <div class="saved-card-dest">
+          <div class="saved-card-name">${esc(pkg.destination)}</div>
+          <div class="saved-card-date">Sauvegardé le ${esc(date)}</div>
+        </div>
+      </div>
+      <div class="saved-card-pills">
+        <span class="saved-pill"><i data-lucide="calendar"></i> ${esc(pkg.duration)}</span>
+        <span class="saved-pill"><i data-lucide="users"></i> ${esc(pkg.travelers)}</span>
+        <span class="saved-pill"><i data-lucide="star"></i> ${esc(pkg.budgetCategory)}</span>
+      </div>
+      <div class="saved-budget">${esc(pkg.budgetPerPerson)} <small style="font-size:.7em;font-weight:600;color:var(--muted)">/ pers.</small></div>
+      <div class="saved-card-actions">
+        <button class="btn-view" data-id="${esc(id)}"><i data-lucide="eye"></i> Voir le voyage</button>
+        <button class="btn-delete" data-id="${esc(id)}" title="Supprimer"><i data-lucide="trash-2"></i></button>
+      </div>
+    `;
+
+    card.querySelector('.btn-view').addEventListener('click', () => {
+      renderResults(pkg);
+      switchTab('flights');
+      showView('view-results');
+      window.scrollTo(0, 0);
+      markSaveButton(id, trips);
+    });
+
+    card.querySelector('.btn-delete').addEventListener('click', () => {
+      deleteTrip(id);
+      card.remove();
+      const remaining = getSavedTrips();
+      if (empty) empty.hidden = remaining.length > 0;
+    });
+
+    grid.appendChild(card);
+  });
+  lucide.createIcons();
+}
+
+function markSaveButton(existingId, trips) {
+  const btn   = document.getElementById('btn-save');
+  const label = document.getElementById('save-label');
+  if (!btn || !label) return;
+  if (existingId) {
+    btn.className = 'btn-save saved';
+    btn.dataset.existingId = existingId;
+    label.textContent = 'Voyage sauvegardé';
+  } else {
+    btn.className = 'btn-save';
+    delete btn.dataset.existingId;
+    label.textContent = 'Sauvegarder ce voyage';
+  }
+}
+
 // ── Views ─────────────────────────────────────────────────────────────────────
 
 function showView(id) {
-  ['view-hero', 'view-loading', 'view-results'].forEach(v => {
+  ['view-hero', 'view-loading', 'view-results', 'view-saved'].forEach(v => {
     const el = document.getElementById(v);
     if (el) el.hidden = v !== id;
   });
@@ -611,10 +715,12 @@ async function handleGenerate() {
     runLoadingAnimation()
   ]);
 
+  currentPkg = pkg;
   renderResults(pkg);
   switchTab('flights');
   showView('view-results');
   window.scrollTo(0, 0);
+  markSaveButton(null, null);
 
   if (btn) btn.disabled = false;
 }
@@ -623,6 +729,7 @@ async function handleGenerate() {
 
 document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
+  updateSavedBadge();
 
   // Generate button
   document.getElementById('btn-generate')?.addEventListener('click', handleGenerate);
@@ -640,9 +747,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Back button
+  // Back button (results → hero)
   document.getElementById('btn-back')?.addEventListener('click', () => {
     showView('view-hero');
+    window.scrollTo(0, 0);
+  });
+
+  // Back button (saved trips → hero)
+  document.getElementById('btn-saved-back')?.addEventListener('click', () => {
+    showView('view-hero');
+    window.scrollTo(0, 0);
+  });
+
+  // Save current trip
+  document.getElementById('btn-save')?.addEventListener('click', () => {
+    const btn = document.getElementById('btn-save');
+    if (!btn || btn.dataset.existingId || !currentPkg) return;
+    saveCurrentTrip(currentPkg);
+    markSaveButton('saved', null);
+  });
+
+  // Saved trips button
+  document.getElementById('btn-saved-trips')?.addEventListener('click', () => {
+    renderSavedView();
+    showView('view-saved');
     window.scrollTo(0, 0);
   });
 
