@@ -1,251 +1,235 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gestion locative</title>
-  <link rel="preconnect" href="https://unpkg.com" />
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VoyageIA — Votre agence de voyage intelligente</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
-  <div id="overlay" class="overlay"></div>
 
-  <div class="layout">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
-        <div class="brand-icon"><i data-lucide="building-2"></i></div>
-        <span class="brand-name">Gestion locative</span>
+<!-- ── Header ───────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <i data-lucide="plane-takeoff"></i>
+      <span>VoyageIA</span>
+    </div>
+    <button id="btn-api-key" class="btn-ghost btn-sm">
+      <i data-lucide="key"></i> Clé API
+    </button>
+  </div>
+</header>
+
+<!-- ── Vue : Hero ────────────────────────────────────────────────────── -->
+<section id="view-hero" class="view hero-view">
+  <div class="hero-content">
+    <div class="hero-badge"><i data-lucide="sparkles"></i> Propulsé par l'IA</div>
+    <h1 class="hero-title">Votre voyage de rêve,<br>composé par l'IA</h1>
+    <p class="hero-sub">Décrivez votre voyage idéal en quelques mots et recevez un programme complet : vols, hôtel, activités et itinéraire jour par jour.</p>
+
+    <div class="prompt-card">
+      <div class="prompt-examples">
+        <span class="examples-label">Essayez :</span>
+        <button class="chip" data-prompt="Je veux partir 10 jours au Japon avec ma famille de 4 personnes, budget confort, passionné de culture japonaise et gastronomie">🇯🇵 Tokyo en famille</button>
+        <button class="chip" data-prompt="Séjour romantique à Paris pour 2 personnes, 5 jours, budget luxe, gastronomie et musées">🇫🇷 Paris romantique</button>
+        <button class="chip" data-prompt="Aventure sportive à Barcelone, 7 jours, 2 personnes, budget moyen, plage et architecture">🇪🇸 Barcelone active</button>
+        <button class="chip" data-prompt="Retraite bien-être à Bali, 14 jours, seul, yoga surf et gastronomie locale">🇮🇩 Bali zen</button>
       </div>
 
-      <nav class="sidebar-nav">
-        <p class="nav-section-label">Navigation</p>
-        <a class="nav-item" data-view="dashboard">
-          <i data-lucide="layout-dashboard"></i><span>Tableau de bord</span>
-        </a>
-        <a class="nav-item" data-view="apartments">
-          <i data-lucide="building-2"></i><span>Appartements</span>
-        </a>
-        <a class="nav-item" data-view="tenants">
-          <i data-lucide="users"></i><span>Locataires</span>
-        </a>
-        <a class="nav-item" data-view="leases">
-          <i data-lucide="key-round"></i><span>Locations</span>
-        </a>
-        <a class="nav-item" data-view="payments">
-          <i data-lucide="receipt"></i><span>Loyers</span>
-        </a>
-        <a class="nav-item" data-view="charges">
-          <i data-lucide="wrench"></i><span>Charges</span>
-        </a>
-      </nav>
+      <textarea id="prompt-input" class="prompt-textarea" rows="3"
+        placeholder="Ex : Je veux partir 2 semaines en Italie avec mon partenaire, budget confort, passionné d'histoire et de gastronomie..."></textarea>
 
-      <div class="sidebar-footer">
-        <p class="nav-section-label">Données</p>
-        <button id="export-btn" class="sidebar-action">
-          <i data-lucide="download"></i><span>Exporter JSON</span>
+      <div class="prompt-footer">
+        <span class="prompt-hint"><i data-lucide="info"></i> Plus vous détaillez, meilleur sera le résultat</span>
+        <button id="btn-generate" class="btn-generate">
+          <i data-lucide="sparkles"></i> Générer mon voyage
         </button>
-        <button id="import-btn" class="sidebar-action">
-          <i data-lucide="upload"></i><span>Importer JSON</span>
-        </button>
-        <input id="import-file" type="file" accept="application/json" hidden />
       </div>
-    </aside>
-
-    <div class="main-wrapper">
-      <header class="topbar">
-        <button id="menu-toggle" class="menu-toggle" aria-label="Ouvrir le menu">
-          <i data-lucide="menu"></i>
-        </button>
-        <h1 id="page-title">Tableau de bord</h1>
-      </header>
-      <main id="app" class="content"></main>
     </div>
   </div>
 
-  <!-- ── Templates ─────────────────────────────────────── -->
+  <div class="hero-bg" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+</section>
 
-  <template id="tpl-dashboard">
-    <section class="view">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon c-blue"><i data-lucide="building-2"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">Appartements</span>
-            <span class="stat-value" data-stat="apartments">0</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon c-violet"><i data-lucide="users"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">Locataires</span>
-            <span class="stat-value" data-stat="tenants">0</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon c-emerald"><i data-lucide="key-round"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">Locations actives</span>
-            <span class="stat-value" data-stat="activeLeases">0</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon c-sky"><i data-lucide="trending-up"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">Loyers mensuels</span>
-            <span class="stat-value" data-stat="monthlyRent">0 €</span>
-          </div>
-        </div>
-        <div class="stat-card warn">
-          <div class="stat-icon c-amber"><i data-lucide="alert-circle"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">Impayés</span>
-            <span class="stat-value" data-stat="unpaid">0 €</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon c-orange"><i data-lucide="wrench"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">Charges (12 mois)</span>
-            <span class="stat-value" data-stat="yearCharges">0 €</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel-row">
-        <div class="panel">
-          <div class="panel-header">
-            <i data-lucide="key-round"></i><h3>Locations actives</h3>
-          </div>
-          <div class="table-wrap">
-            <table data-list="active-leases">
-              <thead><tr><th>Appartement</th><th>Locataire</th><th>Début</th><th>Loyer</th><th>Charges</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-header">
-            <i data-lucide="receipt"></i><h3>Derniers paiements</h3>
-          </div>
-          <div class="table-wrap">
-            <table data-list="recent-payments">
-              <thead><tr><th>Date</th><th>Location</th><th>Montant</th><th>Statut</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-  </template>
-
-  <template id="tpl-apartments">
-    <section class="view">
-      <div class="view-header">
-        <div class="view-title"><i data-lucide="building-2"></i><h2>Appartements</h2></div>
-        <button class="btn-primary" data-action="add"><i data-lucide="plus"></i>Nouvel appartement</button>
-      </div>
-      <div class="table-wrap card">
-        <table data-list="apartments">
-          <thead><tr><th>Nom</th><th>Adresse</th><th>Surface</th><th>Pièces</th><th>Notes</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </template>
-
-  <template id="tpl-tenants">
-    <section class="view">
-      <div class="view-header">
-        <div class="view-title"><i data-lucide="users"></i><h2>Locataires</h2></div>
-        <button class="btn-primary" data-action="add"><i data-lucide="plus"></i>Nouveau locataire</button>
-      </div>
-      <div class="table-wrap card">
-        <table data-list="tenants">
-          <thead><tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Téléphone</th><th>Notes</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </template>
-
-  <template id="tpl-leases">
-    <section class="view">
-      <div class="view-header">
-        <div class="view-title"><i data-lucide="key-round"></i><h2>Locations</h2></div>
-        <button class="btn-primary" data-action="add"><i data-lucide="plus"></i>Nouvelle location</button>
-      </div>
-      <div class="table-wrap card">
-        <table data-list="leases">
-          <thead><tr><th>Appartement</th><th>Locataire</th><th>Début</th><th>Fin</th><th>Loyer</th><th>Charges</th><th>Dépôt</th><th>Statut</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </template>
-
-  <template id="tpl-payments">
-    <section class="view">
-      <div class="view-header">
-        <div class="view-title"><i data-lucide="receipt"></i><h2>Loyers et paiements</h2></div>
-        <div class="btn-group">
-          <button class="btn-secondary" data-action="generate"><i data-lucide="calendar-plus"></i>Générer le mois</button>
-          <button class="btn-primary" data-action="add"><i data-lucide="plus"></i>Nouveau paiement</button>
-        </div>
-      </div>
-      <div class="filters card">
-        <label>Location
-          <select data-filter="lease"><option value="">Toutes les locations</option></select>
-        </label>
-        <label>Statut
-          <select data-filter="status">
-            <option value="">Tous les statuts</option>
-            <option value="paid">Payé</option>
-            <option value="pending">En attente</option>
-          </select>
-        </label>
-      </div>
-      <div class="table-wrap card">
-        <table data-list="payments">
-          <thead><tr><th>Date</th><th>Location</th><th>Type</th><th>Montant</th><th>Statut</th><th>Note</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </template>
-
-  <template id="tpl-charges">
-    <section class="view">
-      <div class="view-header">
-        <div class="view-title"><i data-lucide="wrench"></i><h2>Charges</h2></div>
-        <button class="btn-primary" data-action="add"><i data-lucide="plus"></i>Nouvelle charge</button>
-      </div>
-      <div class="filters card">
-        <label>Appartement
-          <select data-filter="apartment"><option value="">Tous les appartements</option></select>
-        </label>
-      </div>
-      <div class="table-wrap card">
-        <table data-list="charges">
-          <thead><tr><th>Date</th><th>Appartement</th><th>Catégorie</th><th>Libellé</th><th>Montant</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </template>
-
-  <!-- ── Modal ──────────────────────────────────────────── -->
-  <div id="modal" class="modal" hidden>
-    <div class="modal-card">
-      <header class="modal-header">
-        <h3 id="modal-title">Modifier</h3>
-        <button class="btn-icon" id="modal-close" aria-label="Fermer"><i data-lucide="x"></i></button>
-      </header>
-      <form id="modal-form"></form>
+<!-- ── Vue : Chargement ──────────────────────────────────────────────── -->
+<section id="view-loading" class="view loading-view" hidden>
+  <div class="loading-content">
+    <div class="loading-orbit">
+      <div class="orbit-ring"></div>
+      <i data-lucide="plane" class="orbit-plane"></i>
+    </div>
+    <p id="loading-text" class="loading-text">Analyse de votre demande...</p>
+    <div class="loading-steps">
+      <div class="loading-step" id="lstep-0"><i data-lucide="search"></i> Analyse</div>
+      <div class="loading-step" id="lstep-1"><i data-lucide="plane"></i> Vols</div>
+      <div class="loading-step" id="lstep-2"><i data-lucide="hotel"></i> Hôtel</div>
+      <div class="loading-step" id="lstep-3"><i data-lucide="map-pin"></i> Activités</div>
+      <div class="loading-step" id="lstep-4"><i data-lucide="calendar"></i> Programme</div>
     </div>
   </div>
+</section>
 
-  <script src="app.js"></script>
+<!-- ── Vue : Résultats ───────────────────────────────────────────────── -->
+<section id="view-results" class="view results-view" hidden>
+  <div class="results-inner">
+
+    <button id="btn-back" class="btn-back">
+      <i data-lucide="arrow-left"></i> Nouveau voyage
+    </button>
+
+    <!-- Résumé du package -->
+    <div class="summary-card">
+      <div class="summary-left">
+        <div class="summary-dest">
+          <span id="sum-flag" class="dest-flag"></span>
+          <div>
+            <h2 id="sum-destination" class="dest-name"></h2>
+            <p id="sum-departure" class="dest-sub"></p>
+          </div>
+        </div>
+        <div class="summary-pills">
+          <span class="pill pill-blue"><i data-lucide="calendar"></i> <span id="sum-duration"></span></span>
+          <span class="pill pill-violet"><i data-lucide="users"></i> <span id="sum-travelers"></span></span>
+          <span class="pill pill-amber"><i data-lucide="star"></i> <span id="sum-category"></span></span>
+        </div>
+      </div>
+      <div class="summary-budget">
+        <span class="budget-label">Budget estimé</span>
+        <span id="sum-budget" class="budget-value"></span>
+        <span class="budget-note">par personne</span>
+      </div>
+    </div>
+
+    <!-- Navigation onglets -->
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="flights" role="tab"><i data-lucide="plane"></i> Vols</button>
+      <button class="tab" data-tab="hotel" role="tab"><i data-lucide="hotel"></i> Hôtel</button>
+      <button class="tab" data-tab="activities" role="tab"><i data-lucide="compass"></i> Activités</button>
+      <button class="tab" data-tab="program" role="tab"><i data-lucide="calendar-days"></i> Programme</button>
+    </nav>
+
+    <!-- Onglet : Vols -->
+    <div id="panel-flights" class="tab-panel" role="tabpanel">
+      <div class="flights-grid">
+        <div class="flight-card">
+          <div class="flight-header">
+            <span class="flight-dir"><i data-lucide="plane-takeoff"></i> Vol aller</span>
+            <span id="f-out-date" class="flight-date"></span>
+            <span id="f-out-price" class="flight-price"></span>
+          </div>
+          <div class="flight-route">
+            <div class="route-end">
+              <div id="f-out-dep-time" class="route-time"></div>
+              <div id="f-out-dep-airport" class="route-airport"></div>
+            </div>
+            <div class="route-middle">
+              <div class="route-line-wrap">
+                <div class="route-line"></div>
+                <i data-lucide="plane" class="route-plane-icon"></i>
+              </div>
+              <div id="f-out-duration" class="route-dur"></div>
+            </div>
+            <div class="route-end route-end-right">
+              <div id="f-out-arr-time" class="route-time"></div>
+              <div id="f-out-arr-airport" class="route-airport"></div>
+            </div>
+          </div>
+          <div class="flight-footer">
+            <span id="f-out-airline"></span>
+            <span id="f-out-number" class="flight-num"></span>
+            <span id="f-out-class" class="flight-class-badge"></span>
+          </div>
+        </div>
+
+        <div class="flight-card">
+          <div class="flight-header">
+            <span class="flight-dir"><i data-lucide="plane-landing"></i> Vol retour</span>
+            <span id="f-ret-date" class="flight-date"></span>
+            <span id="f-ret-price" class="flight-price"></span>
+          </div>
+          <div class="flight-route">
+            <div class="route-end">
+              <div id="f-ret-dep-time" class="route-time"></div>
+              <div id="f-ret-dep-airport" class="route-airport"></div>
+            </div>
+            <div class="route-middle">
+              <div class="route-line-wrap">
+                <div class="route-line"></div>
+                <i data-lucide="plane" class="route-plane-icon"></i>
+              </div>
+              <div id="f-ret-duration" class="route-dur"></div>
+            </div>
+            <div class="route-end route-end-right">
+              <div id="f-ret-arr-time" class="route-time"></div>
+              <div id="f-ret-arr-airport" class="route-airport"></div>
+            </div>
+          </div>
+          <div class="flight-footer">
+            <span id="f-ret-airline"></span>
+            <span id="f-ret-number" class="flight-num"></span>
+            <span id="f-ret-class" class="flight-class-badge"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglet : Hôtel -->
+    <div id="panel-hotel" class="tab-panel" hidden role="tabpanel">
+      <div class="hotel-card">
+        <div class="hotel-top">
+          <div class="hotel-info">
+            <h3 id="h-name" class="hotel-name"></h3>
+            <div id="h-stars" class="hotel-stars"></div>
+            <p id="h-location" class="hotel-location"></p>
+          </div>
+          <div class="hotel-price-box">
+            <span id="h-price" class="h-price-val"></span>
+            <span class="h-price-unit">/ nuit</span>
+          </div>
+        </div>
+        <p id="h-desc" class="hotel-desc"></p>
+        <div id="h-amenities" class="hotel-amenities"></div>
+      </div>
+    </div>
+
+    <!-- Onglet : Activités -->
+    <div id="panel-activities" class="tab-panel" hidden role="tabpanel">
+      <div id="activities-grid" class="activities-grid"></div>
+    </div>
+
+    <!-- Onglet : Programme -->
+    <div id="panel-program" class="tab-panel" hidden role="tabpanel">
+      <div id="program-list" class="program-timeline"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Modal : Clé API ───────────────────────────────────────────────── -->
+<div id="modal-api" class="modal-backdrop" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-header">
+      <h3 id="modal-title"><i data-lucide="key"></i> Clé API Anthropic</h3>
+      <button id="btn-modal-close" class="btn-icon" aria-label="Fermer"><i data-lucide="x"></i></button>
+    </div>
+    <p class="modal-text">Entrez votre clé API Anthropic pour utiliser Claude et générer des packages vraiment personnalisés. Sans clé, l'application utilise des données simulées réalistes.</p>
+    <input id="api-key-input" type="password" class="api-key-input" placeholder="sk-ant-api03-...">
+    <div id="api-key-status" class="api-key-status" hidden></div>
+    <div class="modal-actions">
+      <button id="btn-api-save" class="btn-primary">Enregistrer</button>
+      <button id="btn-api-clear" class="btn-ghost">Effacer</button>
+    </div>
+    <p class="modal-footnote"><i data-lucide="lock"></i> La clé est stockée uniquement dans votre navigateur (localStorage).</p>
+  </div>
+</div>
+
 </body>
 </html>
