@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reprogrammation 21 jours — Équilibre</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="index.html"><span class="dot">🌿</span> Équilibre</a>
+      <a class="navlink" href="index.html">Accueil</a>
+      <a class="navlink" href="alimentaire.html">Ressentis</a>
+      <a class="navlink" href="reprogrammation.html">Reprogrammation</a>
+      <a class="navlink" href="suivi.html">Suivi</a>
+    </nav>
+  </header>
+
+  <main class="container narrow">
+    <!-- Si pas de profil -->
+    <section id="noProfile" class="card hidden">
+      <h2>🧭 Créez d'abord votre profil</h2>
+      <p>Le programme de reprogrammation s'adapte à votre profil de communication. Cela ne prend qu'une minute.</p>
+      <a class="btn btn-primary" href="index.html#start">Créer mon profil</a>
+    </section>
+
+    <div id="programWrap" class="hidden">
+      <h1>🧠 Programme de reprogrammation</h1>
+      <p class="lead" id="programIntro"></p>
+
+      <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <strong id="progressLabel"></strong>
+          <span class="muted" id="weekTheme"></span>
+        </div>
+        <div class="progress" style="margin-top:8px"><span id="progressBar"></span></div>
+        <div class="days-grid" id="daysGrid" style="margin-top:16px"></div>
+      </section>
+
+      <!-- Lecteur du jour -->
+      <section class="card" id="reader">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+          <h2 id="dayTitle"></h2>
+          <span class="muted" id="dayMeta"></span>
+        </div>
+
+        <div class="btn-row" style="margin:6px 0 16px">
+          <button class="btn btn-accent" id="listenBtn">🔊 Écouter</button>
+          <button class="btn btn-ghost" id="pauseBtn" disabled>⏸ Pause</button>
+          <button class="btn btn-ghost" id="stopBtn" disabled>⏹ Stop</button>
+        </div>
+        <p id="ttsWarn" class="notice hidden">La synthèse vocale n'est pas disponible sur ce navigateur. Vous pouvez lire le texte ci-dessous.</p>
+
+        <div class="reader-text" id="dayBody"></div>
+        <div class="affirmation" id="dayAffirmation"></div>
+
+        <label class="field" for="reflection">Ma réflexion du jour (facultatif)</label>
+        <textarea id="reflection" placeholder="Une pensée, un ressenti, une intention…"></textarea>
+
+        <div class="btn-row" style="margin-top:14px">
+          <button class="btn btn-primary" id="markRead">✓ J'ai fait l'exercice du jour</button>
+          <button class="btn btn-ghost" id="prevDay">← Jour précédent</button>
+          <button class="btn btn-ghost" id="nextDay">Jour suivant →</button>
+        </div>
+        <p id="readerMsg" class="notice hidden" style="margin-top:12px"></p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    Équilibre · 21 jours pour transformer en douceur votre relation à l'alimentation.
+  </footer>
+
+  <script src="js/pcm.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/reprogrammation.js"></script>
+</body>
+</html>

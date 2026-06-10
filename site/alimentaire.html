@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ressentis de faim — Équilibre</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="index.html"><span class="dot">🌿</span> Équilibre</a>
+      <a class="navlink" href="index.html">Accueil</a>
+      <a class="navlink" href="alimentaire.html">Ressentis</a>
+      <a class="navlink" href="reprogrammation.html">Reprogrammation</a>
+      <a class="navlink" href="suivi.html">Suivi</a>
+    </nav>
+  </header>
+
+  <main class="container narrow">
+    <h1>🍽️ Journal des ressentis de faim</h1>
+    <p class="lead">Quand une envie de manger se présente, prenez un instant. Où, dans votre corps, ressentez-vous quelque chose ? Et quel est ce ressenti ?</p>
+
+    <section class="card">
+      <h2>1. Où le ressentez-vous ?</h2>
+      <p class="muted">Touchez la ou les zones du corps concernées.</p>
+      <div class="bodymap-wrap">
+        <div>
+          <!-- Silhouette interactive -->
+          <svg class="bodymap" viewBox="0 0 200 410" role="group" aria-label="Silhouette du corps">
+            <g id="bodyRegions">
+              <circle class="region" data-part="Tête" cx="100" cy="34" r="26"/>
+              <rect class="region" data-part="Gorge / cou" x="88" y="58" width="24" height="18" rx="6"/>
+              <rect class="region" data-part="Poitrine" x="62" y="78" width="76" height="46" rx="14"/>
+              <rect class="region" data-part="Plexus / estomac" x="64" y="126" width="72" height="36" rx="10"/>
+              <rect class="region" data-part="Ventre" x="64" y="164" width="72" height="46" rx="14"/>
+              <rect class="region" data-part="Bras gauche" x="36" y="80" width="20" height="104" rx="10"/>
+              <rect class="region" data-part="Bras droit" x="144" y="80" width="20" height="104" rx="10"/>
+              <rect class="region" data-part="Jambe gauche" x="66" y="214" width="30" height="160" rx="12"/>
+              <rect class="region" data-part="Jambe droite" x="104" y="214" width="30" height="160" rx="12"/>
+            </g>
+          </svg>
+          <div class="bodymap-legend">Zones sélectionnées : <span id="selParts">aucune</span></div>
+        </div>
+        <div>
+          <h3>2. Quel ressenti ?</h3>
+          <div class="chips" id="sensChips"></div>
+
+          <label class="field">3. Intensité du ressenti</label>
+          <div class="range-row">
+            <input type="range" id="intensity" min="1" max="10" value="5">
+            <span class="range-val" id="intVal">5</span>
+          </div>
+
+          <label class="field">4. À votre avis, cette faim est…</label>
+          <div class="chips" id="hungerType">
+            <span class="chip" data-h="physique">🥗 Physique</span>
+            <span class="chip" data-h="emotionnelle">💭 Émotionnelle</span>
+            <span class="chip" data-h="incertaine">🤔 Je ne sais pas</span>
+          </div>
+
+          <label class="field">5. Une émotion ou un déclencheur ?</label>
+          <div class="chips" id="emoChips"></div>
+
+          <label class="field" for="note">6. Note libre (facultatif)</label>
+          <textarea id="note" placeholder="Ce qui se passait, ce que vous avez fait…"></textarea>
+
+          <div class="btn-row" style="margin-top:16px">
+            <button class="btn btn-primary" id="saveEntry">Enregistrer ce ressenti</button>
+            <button class="btn btn-ghost" id="resetForm">Réinitialiser</button>
+          </div>
+          <p id="entryMsg" class="notice hidden" style="margin-top:12px"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Mes derniers ressentis</h2>
+      <div id="entryList"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Équilibre · vos données restent privées, stockées uniquement sur votre appareil.
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script src="js/alimentaire.js"></script>
+</body>
+</html>
