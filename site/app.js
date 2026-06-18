@@ -7,6 +7,11 @@ const MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+// Last search context + the currently open itinerary, for the modal/exports.
+let CTX = null;
+let CURRENT_ITIN = null;
+let CURRENT_DEST = null;
+
 /* ---------------- Profile persistence ---------------- */
 
 function loadProfile() {
@@ -332,7 +337,10 @@ function renderResults(ranked, profile, trip, overrides = {}) {
     wrap.appendChild(banner);
   }
 
-  ranked.forEach(({ dest, reasons }) => {
+  // Remember context so the itinerary modal can rebuild for any card.
+  CTX = { ranked, profile, trip };
+
+  ranked.forEach(({ dest, reasons }, index) => {
     const cost = estimateCost(dest, profile, trip);
     const links = bookingLinks(dest, profile, trip, cost);
     const months = dest.bestMonths.map((m) => MONTHS[m]).join(", ");
@@ -364,6 +372,7 @@ function renderResults(ranked, profile, trip, overrides = {}) {
         <div class="muted">Best months: ${months}</div>
       </div>
       <div class="links">
+        <button class="btn itinerary-btn" data-i="${index}">🗓️ Build itinerary</button>
         <a class="btn primary" href="${links.hotels}" target="_blank" rel="noopener">🏨 Hotels (Booking.com)</a>
         <a class="btn" href="${links.flights}" target="_blank" rel="noopener">✈️ Flights</a>
         <a class="btn" href="${links.activities}" target="_blank" rel="noopener">🎟️ Activities</a>
@@ -374,6 +383,123 @@ function renderResults(ranked, profile, trip, overrides = {}) {
   });
 
   wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ---------------- Itinerary modal ---------------- */
+
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem("tc_prefs")) || {}; }
+  catch { return {}; }
+}
+function savePrefs(p) { localStorage.setItem("tc_prefs", JSON.stringify(p)); }
+
+function openItinerary(index) {
+  if (!CTX || !CTX.ranked[index]) return;
+  CURRENT_DEST = CTX.ranked[index].dest;
+
+  const p = loadPrefs();
+  $("#pref-start").value = p.start || "09:00";
+  $("#pref-lunch").value = p.lunch || "13:00";
+  $("#pref-dinner").value = p.dinner || "20:00";
+  $("#pref-pace").value = p.pace || "balanced";
+  $("#pref-minimize").checked = p.minimizeTravel !== false;
+
+  $("#itin-title").textContent = `Itinerary · ${CURRENT_DEST.name}`;
+  $("#itin-output").innerHTML = "";
+  $("#itin-export").hidden = true;
+  CURRENT_ITIN = null;
+
+  const modal = $("#itin-modal");
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeItinerary() {
+  $("#itin-modal").hidden = true;
+  document.body.style.overflow = "";
+}
+
+function generateItinerary() {
+  if (!CURRENT_DEST) return;
+  const prefs = {
+    start: $("#pref-start").value || "09:00",
+    lunch: $("#pref-lunch").value || "13:00",
+    dinner: $("#pref-dinner").value || "20:00",
+    pace: $("#pref-pace").value,
+    minimizeTravel: $("#pref-minimize").checked
+  };
+  savePrefs(prefs);
+
+  const cost = estimateCost(CURRENT_DEST, CTX.profile, CTX.trip);
+  CURRENT_ITIN = buildItinerary(CURRENT_DEST, {
+    ...prefs,
+    days: cost.days,
+    diet: CTX.profile.diet
+  });
+
+  renderItinerary(CURRENT_ITIN);
+  $("#itin-export").hidden = false;
+  $("#exp-share").hidden = !navigator.share;
+}
+
+function renderItinerary(itin) {
+  const out = $("#itin-output");
+  const daysHtml = itin.schedule.map((day) => `
+    <div class="itin-day">
+      <div class="itin-day-head">Day ${day.day} <span class="itin-zone">${day.zone}</span></div>
+      <ul class="itin-blocks">
+        ${day.blocks.map((b) => `
+          <li class="itin-block ${b.type}">
+            <span class="itin-time">${b.time}</span>
+            <span class="itin-title">${b.type === "meal" ? "🍽 " : ""}${b.title}</span>
+            ${b.meta ? `<span class="itin-meta">${b.meta}</span>` : ""}
+          </li>`).join("")}
+      </ul>
+    </div>`).join("");
+
+  out.innerHTML = `
+    <div class="itin-summary">
+      <div><strong>🏨 Stay:</strong> ${itin.hotelArea}</div>
+      <div><strong>🚇 Getting around:</strong> ${itin.transport}</div>
+    </div>
+    ${daysHtml}`;
+}
+
+/* ---------------- Exports ---------------- */
+
+function exportCopy() {
+  if (!CURRENT_ITIN) return;
+  navigator.clipboard.writeText(itineraryToText(CURRENT_ITIN))
+    .then(() => flash("Itinerary copied to clipboard."))
+    .catch(() => flash("Couldn't copy — try Download instead."));
+}
+
+function exportDownload() {
+  if (!CURRENT_ITIN) return;
+  const text = itineraryToText(CURRENT_ITIN);
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `itinerary-${CURRENT_ITIN.destName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  flash("Itinerary downloaded.");
+}
+
+function exportEmail() {
+  if (!CURRENT_ITIN) return;
+  const subject = `Trip itinerary: ${CURRENT_ITIN.destName} (${CURRENT_ITIN.days} days)`;
+  const body = itineraryToText(CURRENT_ITIN);
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function exportShare() {
+  if (!CURRENT_ITIN || !navigator.share) return;
+  navigator.share({
+    title: `Trip itinerary: ${CURRENT_ITIN.destName}`,
+    text: itineraryToText(CURRENT_ITIN)
+  }).catch(() => {});
 }
 
 /* ---------------- Misc UI ---------------- */
@@ -405,4 +531,22 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#ov-adults-only").checked = false;
     flash("Trip adjustments cleared.");
   });
+
+  // Itinerary: open from any result card (delegated).
+  $("#results").addEventListener("click", (e) => {
+    const btn = e.target.closest(".itinerary-btn");
+    if (btn) openItinerary(parseInt(btn.dataset.i, 10));
+  });
+  $("#itin-close").addEventListener("click", closeItinerary);
+  $("#itin-modal").addEventListener("click", (e) => {
+    if (e.target.id === "itin-modal") closeItinerary();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("#itin-modal").hidden) closeItinerary();
+  });
+  $("#itin-generate").addEventListener("click", generateItinerary);
+  $("#exp-copy").addEventListener("click", exportCopy);
+  $("#exp-download").addEventListener("click", exportDownload);
+  $("#exp-email").addEventListener("click", exportEmail);
+  $("#exp-share").addEventListener("click", exportShare);
 });
