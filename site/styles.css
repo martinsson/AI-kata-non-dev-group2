@@ -114,7 +114,7 @@ main {
 label { display: flex; flex-direction: column; gap: 6px; font-size: .9rem; color: var(--muted); font-weight: 600; }
 .opt { color: var(--muted); font-weight: 400; font-size: .8rem; }
 
-input, select {
+input, select, textarea {
   background: var(--field);
   border: 1px solid var(--line);
   color: var(--text);
@@ -122,8 +122,27 @@ input, select {
   border-radius: 10px;
   font-size: 1rem;
   font-weight: 500;
+  font-family: inherit;
 }
-input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0; background: #fff; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; background: #fff; }
+
+/* Plan with AI box (main page) */
+.ai-plan-box {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 2px dashed var(--line);
+}
+.ai-or {
+  text-align: center;
+  color: var(--muted);
+  font-size: .85rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.ai-plan-box textarea { width: 100%; resize: vertical; }
+.ai-plan-row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.ai-plan-row input { flex: 1 1 220px; }
+.ai-plan { border-top: 4px solid var(--accent); }
 
 .interests {
   border: 1px solid var(--line);
