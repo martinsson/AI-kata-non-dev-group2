@@ -175,6 +175,17 @@
         <button id="plan" class="btn primary">Find my trips</button>
         <button id="surprise" class="btn">✨ Surprise me</button>
       </div>
+
+      <div class="ai-plan-box">
+        <div class="ai-or">— or skip the menus and just describe your trip —</div>
+        <textarea id="ai-trip-text" rows="3"
+          placeholder="e.g. A relaxed week somewhere warm in October with my two kids, mid-range budget, lots of food and beaches"></textarea>
+        <div class="ai-plan-row">
+          <input type="password" id="ai-key-main" placeholder="Anthropic API key (sk-ant-...)" autocomplete="off" />
+          <button id="plan-ai" class="btn primary">✨ Plan with AI</button>
+        </div>
+        <p class="ai-note">Bring your own key — stored only in this browser, sent directly to Claude (<code>claude-opus-4-8</code>). Your saved profile is used as context.</p>
+      </div>
     </section>
 
     <div id="map" class="map" hidden></div>

@@ -393,11 +393,8 @@ function renderResults(ranked, profile, trip, overrides = {}) {
 
 /* ---------------- Map ---------------- */
 
-function renderMap(ranked, profile, trip) {
-  if (typeof L === "undefined") return; // Leaflet failed to load — skip gracefully
-  const el = $("#map");
-  el.hidden = false;
-
+function ensureMap() {
+  if (typeof L === "undefined") return null; // Leaflet failed to load
   if (!MAP) {
     MAP = L.map("map", { scrollWheelZoom: false });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -405,9 +402,18 @@ function renderMap(ranked, profile, trip) {
       attribution: "© OpenStreetMap contributors"
     }).addTo(MAP);
   }
+  return MAP;
+}
 
+function clearMarkers() {
   MAP_MARKERS.forEach((m) => MAP.removeLayer(m));
   MAP_MARKERS = [];
+}
+
+function renderMap(ranked, profile, trip) {
+  if (!ensureMap()) return; // degrade gracefully
+  $("#map").hidden = false;
+  clearMarkers();
 
   const bounds = [];
   ranked.forEach(({ dest }) => {
@@ -619,6 +625,122 @@ async function generateItineraryAI() {
   }
 }
 
+/* ---------------- Plan with AI (main page, free text) ---------------- */
+
+async function planWithAI() {
+  const key = ($("#ai-key-main").value || "").trim();
+  saveKey(key);
+  if (!key) { flash("Add your Anthropic API key first."); $("#ai-key-main").focus(); return; }
+
+  const text = ($("#ai-trip-text").value || "").trim();
+  if (!text) { flash("Tell us about your trip first."); $("#ai-trip-text").focus(); return; }
+
+  const profile = applyOverrides(readFormProfile(), readOverrides());
+  const days = parseInt($("#trip-days").value, 10) || null;
+  const month = parseInt($("#trip-month").value, 10) || null;
+  const prefs = loadPrefs();
+  const ages = profile.travellers === "family" && (profile.childrenAges || []).length
+    ? ` Children ages: ${profile.childrenAges.join(", ")}.` : "";
+
+  const catalogue = DESTINATIONS.map((d) =>
+    `${d.name} (${d.country}) — ${d.climate}, ${budgetWord(d.budgetLevel)} budget, ${d.interests.join("/")}`
+  ).join("\n");
+
+  const system =
+    "You are an expert travel concierge. From the traveller's free-text request, choose the " +
+    "single best destination (prefer one from the provided catalogue; only go off-list if none " +
+    "fit), then write a realistic, well-paced day-by-day itinerary in Markdown. Respect their " +
+    "profile, diet, budget and any constraints they mention. Begin your reply with exactly one " +
+    "line: 'DESTINATION: <name>, <country>', then a blank line, then the itinerary " +
+    "(### Day N — area, with timed bullets, a hotel-area suggestion, and a transport tip). " +
+    "Don't invent precise prices or opening hours.";
+
+  const user = `The traveller wrote:
+"${text}"
+
+PROFILE (use as defaults; the free-text request takes priority)
+- Travellers: ${profile.travellers} (${profile.adults} adults, ${profile.children} children).${ages}
+- Budget style: ${profile.budget}
+- Diet: ${profile.diet}
+- Climate preference: ${profile.climate}
+- Interests: ${(profile.interests || []).join(", ") || "general"}
+- Flying from: ${profile.origin}
+${days ? `- Duration: ${days} days` : "- Duration: choose a sensible length"}
+${month ? `- Month: ${MONTHS[month]}` : ""}
+
+SCHEDULING: start ~${prefs.start || "09:00"}, lunch ~${prefs.lunch || "13:00"}, dinner ~${prefs.dinner || "20:00"}, ${prefs.pace || "balanced"} pace.
+
+CATALOGUE (prefer these):
+${catalogue}
+
+Reply now, starting with the DESTINATION line.`;
+
+  const wrap = $("#results");
+  wrap.innerHTML = `<div class="ai-loading">✨ Planning your trip with Claude…</div>`;
+  $("#map").hidden = true;
+  wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+  const btn = $("#plan-ai");
+  btn.disabled = true;
+
+  try {
+    const out = await callClaude(key, system, user);
+    let destLine = "";
+    let body = out;
+    const m = out.match(/^\s*DESTINATION:\s*(.+)$/im);
+    if (m) { destLine = m[1].trim(); body = out.slice(out.indexOf(m[0]) + m[0].length); }
+
+    CURRENT_AI_TEXT = out;
+    CURRENT_ITIN = { destName: destLine || "Your trip", country: "", days: days || 0 };
+    renderAIPlan(destLine, body);
+    maybeMapFromText(destLine);
+  } catch (err) {
+    wrap.innerHTML =
+      `<div class="ai-error">Couldn't plan: ${escapeHtml(err.message)}<br>` +
+      `Check your API key and that your network allows calls to api.anthropic.com.</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderAIPlan(destLine, body) {
+  const wrap = $("#results");
+  wrap.innerHTML = `
+    <article class="card ai-plan">
+      <div class="ai-badge">✨ AI trip plan</div>
+      ${destLine ? `<h3>${escapeHtml(destLine)}</h3>` : ""}
+      <div class="ai-itin">${mdLite(body)}</div>
+      <div class="links">
+        <button class="btn" id="ai-copy">📋 Copy</button>
+        <button class="btn" id="ai-download">⬇️ Download</button>
+        <button class="btn" id="ai-email">✉️ Email</button>
+      </div>
+    </article>`;
+  $("#ai-copy").addEventListener("click", exportCopy);
+  $("#ai-download").addEventListener("click", exportDownload);
+  $("#ai-email").addEventListener("click", exportEmail);
+}
+
+// Drop a single pin if the AI's destination matches our catalogue.
+function maybeMapFromText(destLine) {
+  if (!ensureMap() || !destLine) { $("#map").hidden = true; return; }
+  const lower = destLine.toLowerCase();
+  let match = Object.keys(COORDS).find((name) => lower.includes(name.toLowerCase()));
+  if (!match) {
+    const d = DESTINATIONS.find((d) => lower.includes(d.country.toLowerCase()));
+    if (d) match = d.name;
+  }
+  if (!match) { $("#map").hidden = true; return; }
+
+  $("#map").hidden = false;
+  clearMarkers();
+  const c = COORDS[match];
+  const marker = L.marker(c).addTo(MAP);
+  marker.bindPopup(`<strong>${match}</strong>`).openPopup();
+  MAP_MARKERS.push(marker);
+  MAP.setView(c, 6);
+  setTimeout(() => MAP.invalidateSize(), 100);
+}
+
 // Minimal, safe Markdown -> HTML (escape first, then a few inline/block rules).
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) =>
@@ -703,7 +825,8 @@ function exportDownload() {
 function exportEmail() {
   const text = getExportText();
   if (!text || !CURRENT_ITIN) return;
-  const subject = `Trip itinerary: ${CURRENT_ITIN.destName} (${CURRENT_ITIN.days} days)`;
+  const subject = `Trip itinerary: ${CURRENT_ITIN.destName}` +
+    (CURRENT_ITIN.days ? ` (${CURRENT_ITIN.days} days)` : "");
   window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
 }
 
@@ -729,10 +852,13 @@ function flash(msg) {
 
 document.addEventListener("DOMContentLoaded", () => {
   applyProfile(loadProfile());
+  $("#ai-key-main").value = loadKey();
   $("#children").addEventListener("input", (e) => {
     renderAgeInputs(parseInt(e.target.value, 10) || 0, readAges(10));
   });
   $("#save-profile").addEventListener("click", saveProfile);
+  $("#plan-ai").addEventListener("click", planWithAI);
+  $("#ai-key-main").addEventListener("change", (e) => saveKey(e.target.value.trim()));
   $("#plan").addEventListener("click", recommend);
   $("#surprise").addEventListener("click", () => {
     $("#trip-country").value = "";
