@@ -11,6 +11,11 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 let CTX = null;
 let CURRENT_ITIN = null;
 let CURRENT_DEST = null;
+let CURRENT_AI_TEXT = null;
+
+// Leaflet map state.
+let MAP = null;
+let MAP_MARKERS = [];
 
 /* ---------------- Profile persistence ---------------- */
 
@@ -382,7 +387,49 @@ function renderResults(ranked, profile, trip, overrides = {}) {
     wrap.appendChild(card);
   });
 
+  renderMap(ranked, profile, trip);
   wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ---------------- Map ---------------- */
+
+function renderMap(ranked, profile, trip) {
+  if (typeof L === "undefined") return; // Leaflet failed to load — skip gracefully
+  const el = $("#map");
+  el.hidden = false;
+
+  if (!MAP) {
+    MAP = L.map("map", { scrollWheelZoom: false });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(MAP);
+  }
+
+  MAP_MARKERS.forEach((m) => MAP.removeLayer(m));
+  MAP_MARKERS = [];
+
+  const bounds = [];
+  ranked.forEach(({ dest }) => {
+    const c = COORDS[dest.name];
+    if (!c) return;
+    const cost = estimateCost(dest, profile, trip);
+    const marker = L.marker(c).addTo(MAP);
+    marker.bindPopup(
+      `<strong>${dest.name}</strong><br>${dest.country}<br>` +
+      `~$${cost.total.toLocaleString()} total · ${cost.days} days`
+    );
+    MAP_MARKERS.push(marker);
+    bounds.push(c);
+  });
+
+  if (bounds.length === 1) {
+    MAP.setView(bounds[0], 5);
+  } else if (bounds.length > 1) {
+    MAP.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 });
+  }
+  // The map is created/shown after layout; recalc its size so tiles fill it.
+  setTimeout(() => MAP.invalidateSize(), 100);
 }
 
 /* ---------------- Itinerary modal ---------------- */
@@ -404,10 +451,12 @@ function openItinerary(index) {
   $("#pref-pace").value = p.pace || "balanced";
   $("#pref-minimize").checked = p.minimizeTravel !== false;
 
+  $("#ai-key").value = loadKey();
   $("#itin-title").textContent = `Itinerary · ${CURRENT_DEST.name}`;
   $("#itin-output").innerHTML = "";
   $("#itin-export").hidden = true;
   CURRENT_ITIN = null;
+  CURRENT_AI_TEXT = null;
 
   const modal = $("#itin-modal");
   modal.hidden = false;
@@ -437,9 +486,165 @@ function generateItinerary() {
     diet: CTX.profile.diet
   });
 
+  CURRENT_AI_TEXT = null;
   renderItinerary(CURRENT_ITIN);
   $("#itin-export").hidden = false;
   $("#exp-share").hidden = !navigator.share;
+}
+
+/* ---------------- AI itinerary (Claude) ---------------- */
+
+function loadKey() { return localStorage.getItem("tc_anthropic_key") || ""; }
+function saveKey(k) {
+  if (k) localStorage.setItem("tc_anthropic_key", k);
+  else localStorage.removeItem("tc_anthropic_key");
+}
+
+// Build a grounded prompt from the destination's curated data + the traveller profile.
+function buildAIPrompt(dest, profile, trip, prefs, days) {
+  const plan = PLANS[dest.name] || genericPlan(dest);
+  const kids = profile.travellers === "family" && (profile.childrenAges || []).length
+    ? `Children ages: ${profile.childrenAges.join(", ")}.` : "";
+  const areas = plan.areas
+    .map((z) => `- ${z.zone}: ${z.spots.map((s) => `${s.name} (~${s.hrs}h)`).join("; ")}`)
+    .join("\n");
+  const food = plan.food.map((f) => `- ${f.name} (${f.meal}, ${f.cuisine})`).join("\n");
+
+  const system =
+    "You are an expert travel concierge. Produce a realistic, well-paced day-by-day " +
+    "itinerary in clear Markdown. Respect the traveller's profile, diet, budget, eating " +
+    "hours and pace. Group each day geographically to minimise transit when asked. " +
+    "Use the supplied points of interest and restaurants as the backbone, but you may add " +
+    "obvious well-known spots. Keep it practical: times, neighbourhoods, and short tips. " +
+    "Do not invent specific prices or opening hours you're unsure of.";
+
+  const user = `Plan a trip to ${dest.name}, ${dest.country}.
+
+TRAVELLER PROFILE
+- Travellers: ${profile.travellers} (${profile.adults} adults, ${profile.children} children). ${kids}
+- Budget style: ${profile.budget}
+- Diet: ${profile.diet}
+- Interests: ${(profile.interests || []).join(", ") || "general"}
+
+TRIP
+- Duration: ${days} days
+- Month: ${trip.month ? MONTHS[trip.month] : "flexible"}
+
+SCHEDULING PREFERENCES
+- Start each day around ${prefs.start}
+- Lunch around ${prefs.lunch}, dinner around ${prefs.dinner}
+- Pace: ${prefs.pace}
+- Minimise daily travel: ${prefs.minimizeTravel ? "yes — keep each day within one area" : "no"}
+
+SUGGESTED BASE: ${plan.hotelArea}
+GETTING AROUND: ${plan.transport}
+
+POINTS OF INTEREST (by area)
+${areas}
+
+RESTAURANTS
+${food}
+
+Write the itinerary now, one section per day (### Day N — area), with timed bullet points for activities and meals, a hotel-area suggestion, and a one-line transport tip per day.`;
+
+  return { system, user };
+}
+
+async function callClaude(apiKey, system, userText) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-opus-4-8",
+      max_tokens: 4000,
+      system,
+      messages: [{ role: "user", content: userText }]
+    })
+  });
+  if (!res.ok) {
+    let detail = "";
+    try { detail = (await res.json()).error?.message || ""; } catch { /* ignore */ }
+    throw new Error(`API ${res.status}${detail ? ": " + detail : ""}`);
+  }
+  const data = await res.json();
+  return (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+}
+
+async function generateItineraryAI() {
+  if (!CURRENT_DEST) return;
+  const key = $("#ai-key").value.trim();
+  saveKey(key);
+  if (!key) {
+    flash("Add your Anthropic API key in AI settings first.");
+    const s = $(".ai-settings"); if (s) s.open = true;
+    return;
+  }
+
+  const prefs = {
+    start: $("#pref-start").value || "09:00",
+    lunch: $("#pref-lunch").value || "13:00",
+    dinner: $("#pref-dinner").value || "20:00",
+    pace: $("#pref-pace").value,
+    minimizeTravel: $("#pref-minimize").checked
+  };
+  savePrefs(prefs);
+
+  const cost = estimateCost(CURRENT_DEST, CTX.profile, CTX.trip);
+  const { system, user } = buildAIPrompt(CURRENT_DEST, CTX.profile, CTX.trip, prefs, cost.days);
+
+  const btn = $("#itin-generate-ai");
+  btn.disabled = true;
+  $("#itin-export").hidden = true;
+  $("#itin-output").innerHTML = `<div class="ai-loading">✨ Writing your itinerary with Claude…</div>`;
+
+  try {
+    const text = await callClaude(key, system, user);
+    CURRENT_AI_TEXT = text;
+    CURRENT_ITIN = { destName: CURRENT_DEST.name, country: CURRENT_DEST.country, days: cost.days };
+    $("#itin-output").innerHTML =
+      `<div class="ai-badge">✨ AI-generated</div><div class="ai-itin">${mdLite(text)}</div>`;
+    $("#itin-export").hidden = false;
+    $("#exp-share").hidden = !navigator.share;
+  } catch (err) {
+    $("#itin-output").innerHTML =
+      `<div class="ai-error">Couldn't generate: ${escapeHtml(err.message)}<br>` +
+      `Check your API key and that your network allows calls to api.anthropic.com.</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Minimal, safe Markdown -> HTML (escape first, then a few inline/block rules).
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function mdLite(md) {
+  const lines = escapeHtml(md).split("\n");
+  let html = "";
+  let inList = false;
+  const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+  for (let raw of lines) {
+    let line = raw
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>");
+    if (/^###\s+/.test(line)) { closeList(); html += `<h4>${line.replace(/^###\s+/, "")}</h4>`; }
+    else if (/^##\s+/.test(line)) { closeList(); html += `<h3>${line.replace(/^##\s+/, "")}</h3>`; }
+    else if (/^#\s+/.test(line)) { closeList(); html += `<h3>${line.replace(/^#\s+/, "")}</h3>`; }
+    else if (/^\s*[-*]\s+/.test(line)) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${line.replace(/^\s*[-*]\s+/, "")}</li>`;
+    } else if (line.trim() === "") { closeList(); }
+    else { closeList(); html += `<p>${line}</p>`; }
+  }
+  closeList();
+  return html;
 }
 
 function renderItinerary(itin) {
@@ -467,16 +672,24 @@ function renderItinerary(itin) {
 
 /* ---------------- Exports ---------------- */
 
+// AI text when present, otherwise the rule-based structured itinerary.
+function getExportText() {
+  if (CURRENT_AI_TEXT) return CURRENT_AI_TEXT;
+  if (CURRENT_ITIN) return itineraryToText(CURRENT_ITIN);
+  return "";
+}
+
 function exportCopy() {
-  if (!CURRENT_ITIN) return;
-  navigator.clipboard.writeText(itineraryToText(CURRENT_ITIN))
+  const text = getExportText();
+  if (!text) return;
+  navigator.clipboard.writeText(text)
     .then(() => flash("Itinerary copied to clipboard."))
     .catch(() => flash("Couldn't copy — try Download instead."));
 }
 
 function exportDownload() {
-  if (!CURRENT_ITIN) return;
-  const text = itineraryToText(CURRENT_ITIN);
+  const text = getExportText();
+  if (!text) return;
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -488,17 +701,18 @@ function exportDownload() {
 }
 
 function exportEmail() {
-  if (!CURRENT_ITIN) return;
+  const text = getExportText();
+  if (!text || !CURRENT_ITIN) return;
   const subject = `Trip itinerary: ${CURRENT_ITIN.destName} (${CURRENT_ITIN.days} days)`;
-  const body = itineraryToText(CURRENT_ITIN);
-  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
 }
 
 function exportShare() {
-  if (!CURRENT_ITIN || !navigator.share) return;
+  const text = getExportText();
+  if (!text || !CURRENT_ITIN || !navigator.share) return;
   navigator.share({
     title: `Trip itinerary: ${CURRENT_ITIN.destName}`,
-    text: itineraryToText(CURRENT_ITIN)
+    text
   }).catch(() => {});
 }
 
@@ -545,6 +759,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape" && !$("#itin-modal").hidden) closeItinerary();
   });
   $("#itin-generate").addEventListener("click", generateItinerary);
+  $("#itin-generate-ai").addEventListener("click", generateItineraryAI);
+  $("#ai-key").addEventListener("change", (e) => saveKey(e.target.value.trim()));
   $("#exp-copy").addEventListener("click", exportCopy);
   $("#exp-download").addEventListener("click", exportDownload);
   $("#exp-email").addEventListener("click", exportEmail);

@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Trip Concierge</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -175,6 +177,8 @@
       </div>
     </section>
 
+    <div id="map" class="map" hidden></div>
+
     <section id="results" class="results"></section>
   </main>
 
@@ -206,7 +210,17 @@
           </label>
         </div>
         <label class="check"><input type="checkbox" id="pref-minimize" checked /> 🚕 Minimise time spent travelling each day</label>
-        <button id="itin-generate" class="btn primary">Generate itinerary</button>
+        <div class="itin-actions">
+          <button id="itin-generate" class="btn primary">Generate itinerary</button>
+          <button id="itin-generate-ai" class="btn">✨ Generate with AI</button>
+        </div>
+        <details class="ai-settings">
+          <summary>🔑 AI settings (for ✨ Generate with AI)</summary>
+          <label>Anthropic API key
+            <input type="password" id="ai-key" placeholder="sk-ant-..." autocomplete="off" />
+          </label>
+          <p class="ai-note">Bring your own key. It's stored only in this browser (localStorage) and sent directly from your browser to the Claude API — never to our servers. Avoid this on shared computers. Model: <code>claude-opus-4-8</code>.</p>
+        </details>
       </div>
 
       <div id="itin-output" class="itin-output"></div>

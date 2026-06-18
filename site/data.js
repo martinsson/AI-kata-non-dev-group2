@@ -256,6 +256,25 @@ const DESTINATIONS = [
   }
 ];
 
+// Map coordinates [lat, lng] per destination, keyed by name (for the Leaflet map).
+const COORDS = {
+  "Lisbon": [38.7223, -9.1393],
+  "Bali": [-8.4095, 115.1889],
+  "Kyoto": [35.0116, 135.7681],
+  "Reykjavik & South Coast": [64.1466, -21.9426],
+  "Barcelona": [41.3851, 2.1734],
+  "Marrakech": [31.6295, -7.9811],
+  "Costa Rica": [9.7489, -83.7534],
+  "Rome": [41.9028, 12.4964],
+  "Thailand (Bangkok & islands)": [13.7563, 100.5018],
+  "Zermatt": [46.0207, 7.7491],
+  "Riviera Maya": [20.6296, -87.0739],
+  "Vietnam (Hanoi & Ha Long)": [21.0278, 105.8342],
+  "Santorini & Athens": [36.3932, 25.4615],
+  "Dubai": [25.2048, 55.2708],
+  "Amsterdam": [52.3676, 4.9041]
+};
+
 // Rough round-trip economy flight estimate (USD/person) by origin region -> dest region.
 const FLIGHT_MATRIX = {
   Europe:   { Europe: 150, Africa: 300, Asia: 700, Americas: 650 },
