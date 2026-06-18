@@ -135,6 +135,40 @@
         </label>
       </div>
 
+      <details class="overrides">
+        <summary>🎛️ Adjust for this trip <span class="opt">(optional — your profile stays as is)</span></summary>
+        <div class="grid">
+          <label>Budget this trip
+            <select id="ov-budget">
+              <option value="">Use my profile</option>
+              <option value="budget">Budget</option>
+              <option value="mid">Mid-range</option>
+              <option value="luxury">Luxury</option>
+            </select>
+          </label>
+          <label>Mood
+            <select id="ov-mood">
+              <option value="">Use my profile</option>
+              <option value="relax">Relax</option>
+              <option value="adventure">Adventure</option>
+              <option value="culture">Culture &amp; food</option>
+              <option value="party">Party &amp; nightlife</option>
+            </select>
+          </label>
+          <label>Climate
+            <select id="ov-climate">
+              <option value="">Use my profile</option>
+              <option value="beach">Hot &amp; beach</option>
+              <option value="warm">Warm</option>
+              <option value="mild">Mild</option>
+              <option value="cold">Cold &amp; snow</option>
+            </select>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="ov-adults-only" /> 🧑‍🤝‍🧑 Adults only this trip (no kids)</label>
+        <button id="reset-overrides" type="button" class="btn link">Clear adjustments</button>
+      </details>
+
       <div class="actions">
         <button id="plan" class="btn primary">Find my trips</button>
         <button id="surprise" class="btn">✨ Surprise me</button>

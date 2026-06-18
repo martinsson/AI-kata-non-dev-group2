@@ -156,6 +156,51 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 
 .actions { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
 
+/* Per-trip overrides */
+.overrides {
+  margin-top: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 6px 14px;
+  background: var(--field);
+}
+.overrides > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  padding: 8px 0;
+  list-style: none;
+}
+.overrides > summary::-webkit-details-marker { display: none; }
+.overrides > summary::before { content: "▸ "; color: var(--accent); }
+.overrides[open] > summary::before { content: "▾ "; }
+.overrides[open] { padding-bottom: 14px; }
+.overrides .grid { margin-top: 6px; }
+.check { flex-direction: row !important; align-items: center; gap: 8px; margin-top: 14px; color: var(--text) !important; font-weight: 600; }
+.btn.link { background: none; border: none; color: var(--accent-2); padding: 8px 0; margin-top: 8px; text-decoration: underline; }
+.btn.link:hover { transform: none; box-shadow: none; }
+
+.override-banner {
+  background: #ecfeff;
+  border: 1px solid #a5f3fc;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 4px 2px 6px;
+  font-size: .9rem;
+  color: #0e7490;
+}
+.override-banner span {
+  display: inline-block;
+  background: var(--accent);
+  color: #042c2a;
+  font-weight: 700;
+  padding: 1px 10px;
+  border-radius: 999px;
+  margin: 0 4px;
+  font-size: .8rem;
+}
+.override-banner em { color: var(--muted); font-style: normal; }
+
 .btn {
   border: 1px solid var(--line);
   background: #fff;

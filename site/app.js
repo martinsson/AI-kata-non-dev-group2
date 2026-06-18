@@ -14,9 +14,10 @@ function loadProfile() {
   catch { return null; }
 }
 
-function saveProfile() {
+// Read the current profile form values (without persisting).
+function readFormProfile() {
   const children = parseInt($("#children").value, 10) || 0;
-  const profile = {
+  return {
     travellers: $("#travellers").value,
     adults: parseInt($("#adults").value, 10) || 1,
     children,
@@ -27,6 +28,10 @@ function saveProfile() {
     diet: $("#diet").value,
     interests: $$(".interest:checked").map((c) => c.value)
   };
+}
+
+function saveProfile() {
+  const profile = readFormProfile();
   localStorage.setItem("tc_profile", JSON.stringify(profile));
   flash("Profile saved — you won't be asked these again.");
   return profile;
@@ -240,10 +245,58 @@ function bookingLinks(dest, profile, trip, cost) {
   return { hotels, flights, activities, checkin, checkout };
 }
 
+/* ---------------- Per-trip overrides ---------------- */
+
+// Each mood swaps the interests used for scoring (this trip only).
+const MOODS = {
+  relax: ["relaxation", "food"],
+  adventure: ["adventure", "nature"],
+  culture: ["culture", "food"],
+  party: ["nightlife", "food"]
+};
+
+function readOverrides() {
+  return {
+    budget: $("#ov-budget").value,
+    mood: $("#ov-mood").value,
+    climate: $("#ov-climate").value,
+    adultsOnly: $("#ov-adults-only").checked
+  };
+}
+
+// Layer trip overrides on top of the baseline profile — without mutating it.
+function applyOverrides(base, ov) {
+  const eff = {
+    ...base,
+    childrenAges: [...(base.childrenAges || [])],
+    interests: [...(base.interests || [])]
+  };
+  if (ov.budget) eff.budget = ov.budget;
+  if (ov.climate) eff.climate = ov.climate;
+  if (ov.mood && MOODS[ov.mood]) eff.interests = [...MOODS[ov.mood]];
+  if (ov.adultsOnly) {
+    eff.children = 0;
+    eff.childrenAges = [];
+    eff.travellers = (base.adults || 1) > 1 ? "couple" : "solo";
+  }
+  return eff;
+}
+
+// Human-readable chips describing which overrides are active.
+function overrideSummary(ov) {
+  const out = [];
+  if (ov.budget) out.push(`budget: ${ov.budget}`);
+  if (ov.mood) out.push(`mood: ${ov.mood}`);
+  if (ov.climate) out.push(`climate: ${ov.climate}`);
+  if (ov.adultsOnly) out.push("adults only");
+  return out;
+}
+
 /* ---------------- Rendering ---------------- */
 
 function recommend() {
-  const profile = saveProfile();
+  const overrides = readOverrides();
+  const profile = applyOverrides(readFormProfile(), overrides);
   const trip = {
     country: $("#trip-country").value.trim(),
     days: parseInt($("#trip-days").value, 10) || null,
@@ -255,10 +308,10 @@ function recommend() {
     .sort((a, b) => b.score - a.score)
     .slice(0, trip.country ? 4 : 6);
 
-  renderResults(ranked, profile, trip);
+  renderResults(ranked, profile, trip, overrides);
 }
 
-function renderResults(ranked, profile, trip) {
+function renderResults(ranked, profile, trip, overrides = {}) {
   const wrap = $("#results");
   wrap.innerHTML = "";
 
@@ -268,6 +321,16 @@ function renderResults(ranked, profile, trip) {
     ? `Best matches around "${trip.country}" for your profile:`
     : "Here are ideas tailored to your profile:";
   wrap.appendChild(head);
+
+  const active = overrideSummary(overrides);
+  if (active.length) {
+    const banner = document.createElement("div");
+    banner.className = "override-banner";
+    banner.innerHTML = `🎛️ Just for this trip: ` +
+      active.map((a) => `<span>${a}</span>`).join("") +
+      ` <em>(your saved profile is unchanged)</em>`;
+    wrap.appendChild(banner);
+  }
 
   ranked.forEach(({ dest, reasons }) => {
     const cost = estimateCost(dest, profile, trip);
@@ -334,5 +397,12 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#surprise").addEventListener("click", () => {
     $("#trip-country").value = "";
     recommend();
+  });
+  $("#reset-overrides").addEventListener("click", () => {
+    $("#ov-budget").value = "";
+    $("#ov-mood").value = "";
+    $("#ov-climate").value = "";
+    $("#ov-adults-only").checked = false;
+    flash("Trip adjustments cleared.");
   });
 });
