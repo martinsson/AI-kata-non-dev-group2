@@ -138,6 +138,22 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 .interests legend { color: var(--muted); font-size: .85rem; padding: 0 6px; font-weight: 600; }
 .interests label { flex-direction: row; align-items: center; gap: 6px; color: var(--text); font-weight: 500; }
 
+/* Children's ages */
+.ages-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: var(--field);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.ages-label { color: var(--muted); font-size: .85rem; font-weight: 600; }
+.ages-inputs { display: flex; flex-wrap: wrap; gap: 8px; }
+.age-input { width: 70px; background: #fff; padding: 8px 10px; }
+
 .actions { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
 
 .btn {
@@ -178,6 +194,32 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 
 .reasons { margin: 8px 0; padding-left: 18px; }
 .reasons li { margin: 3px 0; color: #0f766e; font-weight: 500; }
+
+/* Family / kids block */
+.kids {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+}
+.kids-head { font-weight: 700; color: #9a3412; margin-bottom: 6px; }
+.kids-acts { margin: 4px 0; padding-left: 4px; list-style: none; }
+.kids-acts li { margin: 6px 0; color: var(--text); }
+.age-pill {
+  display: inline-block;
+  background: var(--accent);
+  color: #042c2a;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-right: 6px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.kids-warn { margin: 6px 0 0; padding-left: 4px; list-style: none; }
+.kids-warn li { color: #b45309; font-size: .88rem; margin: 4px 0; }
 
 .cost { margin: 14px 0; padding: 12px 14px; background: var(--field); border-radius: 12px; }
 .cost .big { font-size: 1.5rem; font-weight: 800; color: var(--accent-2); }
