@@ -15,10 +15,12 @@ function loadProfile() {
 }
 
 function saveProfile() {
+  const children = parseInt($("#children").value, 10) || 0;
   const profile = {
     travellers: $("#travellers").value,
     adults: parseInt($("#adults").value, 10) || 1,
-    children: parseInt($("#children").value, 10) || 0,
+    children,
+    childrenAges: readAges(children),
     budget: $("#budget").value,
     climate: $("#climate").value,
     origin: $("#origin").value,
@@ -40,6 +42,51 @@ function applyProfile(p) {
   $("#origin").value = p.origin ?? "Europe";
   $("#diet").value = p.diet ?? "none";
   $$(".interest").forEach((c) => { c.checked = (p.interests || []).includes(c.value); });
+  renderAgeInputs(p.children ?? 0, p.childrenAges || []);
+}
+
+/* ---------------- Children's ages ---------------- */
+
+const AGE_BANDS = { toddler: "0-3", child: "4-9", teen: "10-17" };
+
+function ageBand(age) {
+  if (age <= 3) return "toddler";
+  if (age <= 9) return "child";
+  if (age <= 17) return "teen";
+  return null; // 18+ counted as an adult, ignored for kid logic
+}
+
+function bandLabel(band) {
+  return { toddler: "toddler", child: "child", teen: "teen" }[band] || band;
+}
+
+function renderAgeInputs(count, existing = []) {
+  const row = $("#ages-row");
+  const wrap = $("#ages-inputs");
+  wrap.innerHTML = "";
+  if (!count || count < 1) { row.hidden = true; return; }
+  row.hidden = false;
+  for (let i = 0; i < count; i++) {
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.max = "17";
+    input.className = "age-input";
+    input.placeholder = "age";
+    input.value = existing[i] != null ? existing[i] : "";
+    wrap.appendChild(input);
+  }
+}
+
+function readAges(count) {
+  return $$(".age-input")
+    .slice(0, count)
+    .map((el) => parseInt(el.value, 10))
+    .filter((n) => Number.isFinite(n) && n >= 0 && n <= 17);
+}
+
+function childBands(profile) {
+  return [...new Set((profile.childrenAges || []).map(ageBand).filter(Boolean))];
 }
 
 /* ---------------- Recommendation engine ---------------- */
@@ -77,6 +124,21 @@ function scoreDestination(dest, profile, trip) {
     if (dest.family >= 4) { score += 3; reasons.push("very family-friendly"); }
     else if (dest.family <= 2) { score -= 2; }
     if (profile.children > 0 && dest.family >= 4) score += 1;
+
+    // Age-band fit: reward destinations suited to the kids' ages
+    const bands = childBands(profile);
+    const best = (dest.kids && dest.kids.bestAges) || [];
+    bands.forEach((b) => {
+      if (best.includes(b)) { score += 2; }
+      else { score -= 1; }
+    });
+    if (bands.length && bands.every((b) => best.includes(b))) {
+      reasons.push(`well suited to your kids (${bands.map(bandLabel).join(", ")})`);
+    }
+
+    // Long-haul caution for toddlers
+    const flightPer = (FLIGHT_MATRIX[profile.origin] || {})[dest.region] ?? 600;
+    if (bands.includes("toddler") && flightPer >= 650) score -= 2;
   } else if (profile.travellers === "couple" && dest.interests.includes("relaxation")) {
     score += 1;
   } else if (profile.travellers === "solo" && dest.interests.includes("culture")) {
@@ -112,6 +174,29 @@ function scoreDestination(dest, profile, trip) {
   }
 
   return { score, reasons };
+}
+
+// Age-appropriate activities + cautions for the family's actual kids.
+function familyInsights(dest, profile) {
+  if (profile.travellers !== "family") return null;
+  const bands = childBands(profile);
+  if (!bands.length) return null;
+
+  const all = (dest.kids && dest.kids.activities) || [];
+  const activities = all.filter((a) => bands.includes(a.age));
+
+  const cautions = [];
+  const best = (dest.kids && dest.kids.bestAges) || [];
+  bands.forEach((b) => {
+    if (!best.includes(b)) cautions.push(`Less ideal for a ${bandLabel(b)} — see the note above.`);
+  });
+  const flightPer = (FLIGHT_MATRIX[profile.origin] || {})[dest.region] ?? 600;
+  if (bands.includes("toddler") && flightPer >= 650) {
+    cautions.push("Long-haul flight — tough with a toddler; consider breaking the journey.");
+  }
+
+  const agesLabel = (profile.childrenAges || []).join(", ");
+  return { activities, cautions: [...new Set(cautions)], agesLabel };
 }
 
 function estimateCost(dest, profile, trip) {
@@ -188,6 +273,16 @@ function renderResults(ranked, profile, trip) {
     const cost = estimateCost(dest, profile, trip);
     const links = bookingLinks(dest, profile, trip, cost);
     const months = dest.bestMonths.map((m) => MONTHS[m]).join(", ");
+    const fam = familyInsights(dest, profile);
+
+    const famHtml = fam && (fam.activities.length || fam.cautions.length) ? `
+      <div class="kids">
+        <div class="kids-head">👨‍👩‍👧 For your kids${fam.agesLabel ? ` (ages ${fam.agesLabel})` : ""}</div>
+        ${fam.activities.length ? `<ul class="kids-acts">${fam.activities.map((a) =>
+          `<li><span class="age-pill">${bandLabel(a.age)}</span> ${a.text}</li>`).join("")}</ul>` : ""}
+        ${fam.cautions.length ? `<ul class="kids-warn">${fam.cautions.map((c) =>
+          `<li>⚠️ ${c}</li>`).join("")}</ul>` : ""}
+      </div>` : "";
 
     const card = document.createElement("article");
     card.className = "card";
@@ -198,6 +293,7 @@ function renderResults(ranked, profile, trip) {
       </div>
       <p class="blurb">${dest.blurb}</p>
       ${reasons.length ? `<ul class="reasons">${reasons.map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}
+      ${famHtml}
       <div class="cost">
         <div><span class="big">~$${cost.total.toLocaleString()}</span> est. total
           <span class="muted">(${cost.people} ${cost.people > 1 ? "people" : "person"})</span></div>
@@ -230,6 +326,9 @@ function flash(msg) {
 
 document.addEventListener("DOMContentLoaded", () => {
   applyProfile(loadProfile());
+  $("#children").addEventListener("input", (e) => {
+    renderAgeInputs(parseInt(e.target.value, 10) || 0, readAges(10));
+  });
   $("#save-profile").addEventListener("click", saveProfile);
   $("#plan").addEventListener("click", recommend);
   $("#surprise").addEventListener("click", () => {
