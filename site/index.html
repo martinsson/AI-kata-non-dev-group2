@@ -1,3 +1,137 @@
 <!doctype html>
-<title>Hello</title>
-<h1>Hello, world!</h1>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trip Concierge</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <h1>🧭 Trip Concierge</h1>
+    <p>Tell us about you once, then get trips tailored to your taste, family and budget.</p>
+  </header>
+
+  <main>
+    <!-- Profile: asked once, remembered -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Your profile</h2>
+        <span class="hint">Saved on this device — set it once.</span>
+      </div>
+
+      <div class="grid">
+        <label>Who's travelling?
+          <select id="travellers">
+            <option value="solo">Solo</option>
+            <option value="couple" selected>Couple</option>
+            <option value="family">Family with kids</option>
+            <option value="friends">Friends / group</option>
+          </select>
+        </label>
+
+        <label>Adults
+          <input id="adults" type="number" min="1" max="12" value="2" />
+        </label>
+
+        <label>Children
+          <input id="children" type="number" min="0" max="10" value="0" />
+        </label>
+
+        <label>Budget style
+          <select id="budget">
+            <option value="budget">Budget</option>
+            <option value="mid" selected>Mid-range</option>
+            <option value="luxury">Luxury</option>
+          </select>
+        </label>
+
+        <label>Climate you love
+          <select id="climate">
+            <option value="any" selected>Any</option>
+            <option value="beach">Hot &amp; beach</option>
+            <option value="warm">Warm</option>
+            <option value="mild">Mild</option>
+            <option value="cold">Cold &amp; snow</option>
+          </select>
+        </label>
+
+        <label>Flying from
+          <select id="origin">
+            <option value="Europe" selected>Europe</option>
+            <option value="Americas">Americas</option>
+            <option value="Asia">Asia</option>
+            <option value="Africa">Africa</option>
+          </select>
+        </label>
+
+        <label>Diet
+          <select id="diet">
+            <option value="none" selected>No restriction</option>
+            <option value="vegetarian">Vegetarian</option>
+            <option value="vegan">Vegan</option>
+            <option value="halal">Halal</option>
+            <option value="gluten-free">Gluten-free</option>
+          </select>
+        </label>
+      </div>
+
+      <fieldset class="interests">
+        <legend>Interests</legend>
+        <label><input type="checkbox" class="interest" value="culture" /> Culture</label>
+        <label><input type="checkbox" class="interest" value="food" /> Food</label>
+        <label><input type="checkbox" class="interest" value="nature" /> Nature</label>
+        <label><input type="checkbox" class="interest" value="adventure" /> Adventure</label>
+        <label><input type="checkbox" class="interest" value="relaxation" /> Relaxation</label>
+        <label><input type="checkbox" class="interest" value="nightlife" /> Nightlife</label>
+      </fieldset>
+
+      <button id="save-profile" class="btn ghost">Save profile</button>
+    </section>
+
+    <!-- Trip: only a few questions -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>This trip</h2>
+        <span class="hint">Just a couple of questions — or let us surprise you.</span>
+      </div>
+
+      <div class="grid">
+        <label>Country / region <span class="opt">(optional)</span>
+          <input id="trip-country" type="text" placeholder="e.g. Italy — or leave blank" />
+        </label>
+        <label>How many days?
+          <input id="trip-days" type="number" min="2" max="30" placeholder="e.g. 7" />
+        </label>
+        <label>When? <span class="opt">(optional)</span>
+          <select id="trip-month">
+            <option value="">Flexible</option>
+            <option value="1">January</option><option value="2">February</option>
+            <option value="3">March</option><option value="4">April</option>
+            <option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="plan" class="btn primary">Find my trips</button>
+        <button id="surprise" class="btn">✨ Surprise me</button>
+      </div>
+    </section>
+
+    <section id="results" class="results"></section>
+  </main>
+
+  <div id="flash" class="flash"></div>
+
+  <footer>
+    <p>First version · prices are rough estimates · booking links open Booking.com, Google Flights &amp; GetYourGuide.</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
