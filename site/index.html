@@ -180,11 +180,54 @@
 
   <div id="flash" class="flash"></div>
 
+  <!-- Itinerary modal -->
+  <div id="itin-modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="itin-title">
+      <button class="modal-close" id="itin-close" aria-label="Close">×</button>
+      <h2 id="itin-title">Build your itinerary</h2>
+
+      <div class="itin-prefs">
+        <div class="grid">
+          <label>Start the day
+            <input type="time" id="pref-start" value="09:00" />
+          </label>
+          <label>Lunch around
+            <input type="time" id="pref-lunch" value="13:00" />
+          </label>
+          <label>Dinner around
+            <input type="time" id="pref-dinner" value="20:00" />
+          </label>
+          <label>Pace
+            <select id="pref-pace">
+              <option value="relaxed">Relaxed</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="packed">Packed</option>
+            </select>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="pref-minimize" checked /> 🚕 Minimise time spent travelling each day</label>
+        <button id="itin-generate" class="btn primary">Generate itinerary</button>
+      </div>
+
+      <div id="itin-output" class="itin-output"></div>
+
+      <div id="itin-export" class="itin-export" hidden>
+        <span class="export-label">Send it to someone:</span>
+        <button class="btn" id="exp-copy">📋 Copy</button>
+        <button class="btn" id="exp-download">⬇️ Download</button>
+        <button class="btn" id="exp-email">✉️ Email</button>
+        <button class="btn" id="exp-share" hidden>📤 Share</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <p>First version · prices are rough estimates · booking links open Booking.com, Google Flights &amp; GetYourGuide.</p>
   </footer>
 
   <script src="data.js"></script>
+  <script src="plans.js"></script>
+  <script src="itinerary.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
