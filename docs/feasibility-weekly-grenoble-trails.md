@@ -96,6 +96,39 @@ Decision: no backend, no build step, no paid service. Everything runs in the bro
 
 This replaces the earlier "GitHub Actions + SMTP" MVP as the primary architecture; the Action-based email becomes an optional add-on rather than the core.
 
+## Building the trail database (`site/data/trails.json`)
+
+The catalog is built in three passes, cheapest first, each raising confidence. Every entry carries a `verified` flag and a `source`, so unverified entries are visibly drafts, never silently trusted.
+
+**Schema (one entry per hike):**
+
+```json
+{
+  "id": "chamechaude-col-de-porte",
+  "name": "Chamechaude depuis le Col de Porte",
+  "massif": "Chartreuse",
+  "distance_km": 8.5,
+  "elevation_gain_m": 730,
+  "difficulty": "medium",
+  "loop": false,
+  "trailhead": { "name": "Col de Porte", "lat": 45.2953, "lon": 5.7657 },
+  "bus": { "line": "T65 (cars Région)", "stop": "Col de Porte", "seasonal": true },
+  "komoot_search": "https://www.komoot.com/discover?q=Chamechaude",
+  "gmaps_transit": "https://www.google.com/maps/dir/?api=1&destination=45.2953,5.7657&travelmode=transit",
+  "verified": false,
+  "source": "seed",
+  "done": false
+}
+```
+
+**Pass 1 — Seed (AI knowledge, ~20–25 classics).** Draft entries for the well-documented bus-reachable hikes: Chartreuse (Chamechaude, Saint-Eynard, Le Sappey/Col de Vence sector), Vercors (Moucherotte from Saint-Nizier, plateau hikes from Lans/Villard/Corrençon), Belledonne (Chamrousse lakes sector, Uriage side), plus town-adjacent options (Bastille–Mont Jalla, Néron ridge, Écoutoux). All flagged `verified: false` — bus line numbers change and AI recall can be stale, so pass 1 output is treated as *candidates only*.
+
+**Pass 2 — Verify each entry (web search + official pages).** For every candidate: confirm today's line number and stop on the operator pages (TAG / cars Région Isère), confirm weekend service exists, and mark seasonality (several mountain lines run summer/winter only). Entry flips to `verified: true` with the source noted. This is human-in-the-loop: ~2 minutes per trail, and the user's own Komoot check of the route doubles as validation of the hike itself.
+
+**Pass 3 — Optional automated cross-check (GTFS, free GitHub Action).** A script downloads the open GTFS feeds (TAG + regional), finds stops within ~500 m of each trailhead's coordinates, and computes actual Saturday/Sunday departures and the last return bus. This turns "bus-reachable" from a claim into a computed fact and catches timetable changes over time. (Not runnable from this sandbox — its network policy blocks the data portals — but trivial in Actions or on a laptop.)
+
+**Growth loop.** Start small (15–25 verified entries ≈ 4–6 months of weekly hikes), then add a few candidates per month; the weekly page can surface one unverified candidate as a "help verify this" item. Corrections flow back as edits to the JSON — the git history is the audit trail.
+
 ## Open questions
 
 - Preferred hike length/difficulty range and hiking day (Sat/Sun)?
