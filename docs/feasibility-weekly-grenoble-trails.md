@@ -1,0 +1,136 @@
+# Feasibility study: weekly curated bus-reachable hikes around Grenoble
+
+**Requested workflow:** Every week, check Komoot for hiking options around Grenoble → keep only trails whose starting point is reachable by bus → never repeat a hike already done → check bus timings on Google Maps → email a curated list of 3–5 options.
+
+**Verdict: feasible overall, but not with the exact tools requested.** The two anchor apps in the workflow — Komoot for discovery and Google Maps for bus times — are precisely the two pieces that cannot be automated. Both have well-supported substitutes, and the rest of the workflow (filtering, no-repeat memory, weekly email) is straightforward.
+
+---
+
+## Step-by-step feasibility
+
+### 1. "Check Komoot for options" — ❌ not automatable, workarounds exist
+
+- Komoot **does not offer a public API**. Its API is partner-only (Garmin, Bosch, Suunto…) and Komoot's own support page confirms there is no general developer access ([Komoot API support article](https://support.komoot.com/hc/en-us/articles/7464746034458-Komoot-API)).
+- Automated fetching of komoot.com pages was tested and is blocked (HTTP 403 / bot protection), and scraping would violate their terms of service. Unofficial scrapers exist ([Apify](https://apify.com/creatormagic/komoot-api/api), [parse.bot](https://parse.bot/marketplace/0aec9660-5240-47d5-afa3-06745f962627/komoot-com-api)) but they are paid, fragile, and ToS-grey — not recommended for a weekly personal pipeline.
+
+**Workarounds (pick one):**
+
+| Option | Effort | Reliability |
+|---|---|---|
+| **A. Curated catalog (recommended):** build once a catalog of ~50–100 bus-reachable hikes around Grenoble (Chartreuse, Vercors, Belledonne, Taillefer) with trailhead, bus line, distance, elevation, difficulty. The weekly job picks 3–5 unhiked entries. | One-time setup | High — fully under our control |
+| B. Open route sources instead of Komoot: Visorando, AllTrails, or OpenStreetMap hiking relations (Waymarked Trails) — OSM data is fully open and machine-readable. | Medium | Medium–high |
+| C. Keep Komoot manual: the weekly email names the trail; you look it up in the Komoot app yourself for the map/navigation on the day. | None | High |
+
+Options A + C combine well: automated curation, Komoot stays your navigation app.
+
+### 2. "Reachable by bus" filter — ✅ feasible
+
+Grenoble is unusually well served by open transit data:
+
+- **Métromobilité API** (`data.mobilites-m.fr`) — free API covering TAG bus/tram plus regional lines, with routes, stops, and timetable endpoints ([source](https://data.mobilites-m.fr/donnees)).
+- **GTFS feeds** for the TAG network on the French national open-transport portal ([transport.data.gouv.fr](https://transport.data.gouv.fr/datasets/horaires-theoriques-du-reseau-tag)), including real-time (GTFS-RT).
+- Trailheads outside the metro area (e.g. Col de Porte, Chamrousse, Villard-de-Lans) are served by **cars Région / Transisère** lines, also published as open data.
+
+The bus-reachability of each trailhead is mostly *static* knowledge — it belongs in the catalog (option A), checked once per trail.
+
+### 3. "Check timings on Google Maps" — ❌ as stated / ✅ via open data
+
+- Google Maps has no free automatable interface; the Routes/Directions API requires a billing-enabled Google Cloud key.
+- **Substitute:** the GTFS/Métromobilité data above is the *same underlying timetable data Google Maps displays* for Grenoble. The weekly job can query Saturday/Sunday departures for each proposed trail's bus line and put the actual times in the email. Deep links to Google Maps directions can still be included for one-tap checking on your phone.
+
+⚠️ Caveat found during testing: **this particular sandbox's network policy blocks outbound access** to komoot.com, data.mobilites-m.fr and even transport.data.gouv.fr (the proxy refuses the connection). The weekly automation needs an environment with network access to those domains — e.g. a Claude Code environment with a permissive network policy, or a GitHub Actions runner.
+
+### 4. "Never do a trek twice" — ✅ trivially feasible
+
+Keep a `hikes-done.json` (or a "done" column in the catalog) in this repository. Each weekly run excludes done + previously-proposed-and-declined trails, and you confirm which one you actually hiked (or the job marks the proposed ones after you reply).
+
+### 5. "Send me an email each week" — ✅ feasible, one constraint
+
+- The Gmail integration available in this session can **create drafts but not send** — so today I could prepare the email in your Gmail drafts, not deliver it to your inbox.
+- For true hands-off delivery: a **GitHub Actions weekly cron** in this repo that sends via SMTP/an email action, or a Gmail connection with send permission.
+
+### 6. Weekly scheduling — ✅ feasible, but not from a chat session
+
+Schedules created inside a Claude session are ephemeral (in-memory, ~7-day cap). The durable option is a **GitHub Actions cron** (e.g. Thursday evening, so you can plan the weekend) that runs the curation script — or triggers a Claude Code session — then emails the result.
+
+---
+
+## Main challenges (summary)
+
+1. **Komoot is a closed platform** — no API, scraping blocked. Discovery must come from a curated catalog or open sources; Komoot remains your on-trail navigation app.
+2. **Google Maps isn't automatable for free** — replaced by Grenoble's open GTFS/Métromobilité data (same timetables).
+3. **Sandbox network policy** currently blocks the needed transit-data domains — the job must run where those are reachable (GitHub Actions is the natural fit for this repo).
+4. **Email sending** needs either Gmail send permission or an SMTP step in the Action (drafts are possible today).
+5. **Seasonality & disruptions**: weekend bus frequencies to trailheads are sparse (sometimes 2–3 departures/day) and some mountain lines are seasonal — the job should check the *actual date's* departures, not a generic timetable, and flag last-return times.
+
+## Recommended MVP architecture
+
+```
+[trail catalog in repo]          [hikes-done.json]
+        \                          /
+   GitHub Actions cron (weekly, Thu 18:00)
+        |
+   pick 3–5 unhiked, bus-reachable trails
+        |
+   query Métromobilité/GTFS for this weekend's departures + last return
+        |
+   compose email (trail, distance, D+, difficulty, bus line,
+   departure times, last return, Komoot search link, Google Maps link)
+        |
+   send via SMTP action → jm1974@hotmail.com
+```
+
+## Chosen stack: free, static, all in the browser (GitHub Pages)
+
+Decision: no backend, no build step, no paid service. Everything runs in the browser off static files; the repo's existing Pages deploy (`site/` → `gh-pages` on push to main) is kept as-is.
+
+| Concern | Choice | Cost |
+|---|---|---|
+| Frontend | Vanilla HTML/CSS/JS in `site/` (no framework, no npm, no bundler) | free |
+| Hosting/deploy | GitHub Pages via the existing `deploy.yml` workflow | free |
+| Trail "database" | `site/data/trails.json` — curated catalog committed to the repo (name, massif, distance, D+, difficulty, trailhead, bus line & stop, Komoot link, Google Maps transit deep link) | free |
+| Weekly 3–5 picks | Deterministic in-browser selection seeded by ISO week number, filtered against done-hikes — same picks all week on every device, no cron needed | free |
+| "No trek twice" | `localStorage` (mark as done in the UI) + export/import JSON button as backup. Per-device by design; committing `hikes-done.json` back to the repo stays a manual option | free |
+| Bus timings | Tier 1: Google Maps transit **deep links** per trail (zero code, opens the app on the phone). Tier 2 (optional): client-side fetch of Métromobilité API if CORS allows; if not, a free GitHub Actions job can pre-fetch weekend departures into a JSON | free |
+| Weekly email | Browsers can't send email. If wanted later: free GitHub Actions cron + Gmail SMTP app password (`dawidd6/action-send-mail`). Otherwise the page itself *is* the weekly digest — bookmark it | free |
+
+This replaces the earlier "GitHub Actions + SMTP" MVP as the primary architecture; the Action-based email becomes an optional add-on rather than the core.
+
+## Building the trail database (`site/data/trails.json`)
+
+The catalog is built in three passes, cheapest first, each raising confidence. Every entry carries a `verified` flag and a `source`, so unverified entries are visibly drafts, never silently trusted.
+
+**Schema (one entry per hike):**
+
+```json
+{
+  "id": "chamechaude-col-de-porte",
+  "name": "Chamechaude depuis le Col de Porte",
+  "massif": "Chartreuse",
+  "distance_km": 8.5,
+  "elevation_gain_m": 730,
+  "difficulty": "medium",
+  "loop": false,
+  "trailhead": { "name": "Col de Porte", "lat": 45.2953, "lon": 5.7657 },
+  "bus": { "line": "T65 (cars Région)", "stop": "Col de Porte", "seasonal": true },
+  "komoot_search": "https://www.komoot.com/discover?q=Chamechaude",
+  "gmaps_transit": "https://www.google.com/maps/dir/?api=1&destination=45.2953,5.7657&travelmode=transit",
+  "verified": false,
+  "source": "seed",
+  "done": false
+}
+```
+
+**Pass 1 — Seed (AI knowledge, ~20–25 classics).** Draft entries for the well-documented bus-reachable hikes: Chartreuse (Chamechaude, Saint-Eynard, Le Sappey/Col de Vence sector), Vercors (Moucherotte from Saint-Nizier, plateau hikes from Lans/Villard/Corrençon), Belledonne (Chamrousse lakes sector, Uriage side), plus town-adjacent options (Bastille–Mont Jalla, Néron ridge, Écoutoux). All flagged `verified: false` — bus line numbers change and AI recall can be stale, so pass 1 output is treated as *candidates only*.
+
+**Pass 2 — Verify each entry (web search + official pages).** For every candidate: confirm today's line number and stop on the operator pages (TAG / cars Région Isère), confirm weekend service exists, and mark seasonality (several mountain lines run summer/winter only). Entry flips to `verified: true` with the source noted. This is human-in-the-loop: ~2 minutes per trail, and the user's own Komoot check of the route doubles as validation of the hike itself.
+
+**Pass 3 — Optional automated cross-check (GTFS, free GitHub Action).** A script downloads the open GTFS feeds (TAG + regional), finds stops within ~500 m of each trailhead's coordinates, and computes actual Saturday/Sunday departures and the last return bus. This turns "bus-reachable" from a claim into a computed fact and catches timetable changes over time. (Not runnable from this sandbox — its network policy blocks the data portals — but trivial in Actions or on a laptop.)
+
+**Growth loop.** Start small (15–25 verified entries ≈ 4–6 months of weekly hikes), then add a few candidates per month; the weekly page can surface one unverified candidate as a "help verify this" item. Corrections flow back as edits to the JSON — the git history is the audit trail.
+
+## Open questions
+
+- Preferred hike length/difficulty range and hiking day (Sat/Sun)?
+- Is a non-Komoot discovery source acceptable if each email links back to the trail in Komoot?
+- OK with a GitHub Actions + SMTP sender, or do you want it from your own Gmail?

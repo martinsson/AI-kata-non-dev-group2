@@ -1,3 +1,46 @@
 <!doctype html>
-<title>Hello</title>
-<h1>Hello, Grenoble!</h1>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grenoble Weekly Trails</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥾</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Grenoble Weekly Trails</h1>
+    <p class="tagline">Bus-reachable hikes around Grenoble, picked fresh every week — never the same trek twice.</p>
+  </header>
+
+  <main>
+    <section id="weekly">
+      <h2 id="week-title">This week's picks</h2>
+      <p id="week-subtitle" class="muted"></p>
+      <div id="picks" class="cards"></div>
+    </section>
+
+    <section id="catalog-section">
+      <h2>Full catalog</h2>
+      <p class="muted"><span id="catalog-count"></span> Mark a hike as done and it never comes back in the weekly picks.</p>
+      <div id="catalog"></div>
+    </section>
+
+    <section id="tools">
+      <h2>Your data</h2>
+      <p class="muted">Done-hikes are stored in this browser only. Export before switching devices.</p>
+      <button id="export-btn" type="button">Export done list</button>
+      <label class="import-label">Import done list
+        <input id="import-input" type="file" accept="application/json">
+      </label>
+    </section>
+  </main>
+
+  <footer>
+    <p>⚠️ Seed data — bus lines and stops are not yet verified. Always check the actual departure and <strong>last return bus</strong> in Google Maps before setting out.</p>
+    <p>Trail routes: search the hike by name in the Komoot app for navigation.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
