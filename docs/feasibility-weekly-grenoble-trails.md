@@ -80,6 +80,22 @@ Schedules created inside a Claude session are ephemeral (in-memory, ~7-day cap).
    send via SMTP action → jm1974@hotmail.com
 ```
 
+## Chosen stack: free, static, all in the browser (GitHub Pages)
+
+Decision: no backend, no build step, no paid service. Everything runs in the browser off static files; the repo's existing Pages deploy (`site/` → `gh-pages` on push to main) is kept as-is.
+
+| Concern | Choice | Cost |
+|---|---|---|
+| Frontend | Vanilla HTML/CSS/JS in `site/` (no framework, no npm, no bundler) | free |
+| Hosting/deploy | GitHub Pages via the existing `deploy.yml` workflow | free |
+| Trail "database" | `site/data/trails.json` — curated catalog committed to the repo (name, massif, distance, D+, difficulty, trailhead, bus line & stop, Komoot link, Google Maps transit deep link) | free |
+| Weekly 3–5 picks | Deterministic in-browser selection seeded by ISO week number, filtered against done-hikes — same picks all week on every device, no cron needed | free |
+| "No trek twice" | `localStorage` (mark as done in the UI) + export/import JSON button as backup. Per-device by design; committing `hikes-done.json` back to the repo stays a manual option | free |
+| Bus timings | Tier 1: Google Maps transit **deep links** per trail (zero code, opens the app on the phone). Tier 2 (optional): client-side fetch of Métromobilité API if CORS allows; if not, a free GitHub Actions job can pre-fetch weekend departures into a JSON | free |
+| Weekly email | Browsers can't send email. If wanted later: free GitHub Actions cron + Gmail SMTP app password (`dawidd6/action-send-mail`). Otherwise the page itself *is* the weekly digest — bookmark it | free |
+
+This replaces the earlier "GitHub Actions + SMTP" MVP as the primary architecture; the Action-based email becomes an optional add-on rather than the core.
+
 ## Open questions
 
 - Preferred hike length/difficulty range and hiking day (Sat/Sun)?
